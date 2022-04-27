@@ -32,5 +32,5 @@ runs:
         $projectList = Get-ChildItem -Path ${{ github.workspace }} -Recurse -Filter project.json -File
         foreach($project in $projectList)
         {
-          & "C:\\uipathcli\\lib\\net461\\uipcli.exe" test run ${{ inputs.orchestratorUrl }} ${{ inputs.orchestratorTenant }} --project_path "$project" --accountForApp "${{ inputs.orchestratorLogicalName }}" --applicationId  "${{ inputs.orchestratorApplicationId }}" --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" --applicationScope "${{ inputs.orchestratorApplicationScope }}" --organizationUnit "${{ inputs.orchestratorFolderPath }}" --language en-US
+          & "C:\\uipathcli\\lib\\net461\\uipcli.exe" test run ${{ inputs.orchestratorUrl }} ${{ inputs.orchestratorTenant }} --project_path "$project" --accountForApp "${{ inputs.orchestratorLogicalName }}" --applicationId  "${{ inputs.orchestratorApplicationId }}" --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" --applicationScope "${{ inputs.orchestratorApplicationScope }}" --organizationUnit "${{ inputs.orchestratorFolder }}" --language en-US
         }
