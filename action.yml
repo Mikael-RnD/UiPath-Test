@@ -1,0 +1,36 @@
+name: 'UiPath Test'
+description: 'Runs test cases within a UiPath project'
+inputs:
+  orchestratorUrl: 
+    description: 'Orchestrator instance URL'
+    required: true
+  orchestratorTenant:
+    description: 'Tenant on the Orchestrator instance'
+    required: true
+  orchestratorFolder:
+    description: 'Folder path in modern folder setup'
+    required: true
+  orchestratorApplicationId:
+    description: 'Account for authenticating to Orchestrator'
+    required: true
+  orchestratorApplicationSecret:
+    description: 'Password for the Orchestrator account'
+    required: true
+  orchestratorApplicationScope:
+    description: 'Access scope for external application'
+    required: true
+  orchestratorLogicalName:
+    description: 'Logical name for Orchestrator organization'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Test
+      shell: pwsh
+      run: |
+        $projectList = Get-ChildItem -Path ${{ github.workspace }} -Recurse -Filter project.json -File
+        foreach($project in $projectList)
+        {
+          & "C:\\uipathcli\\lib\\net461\\uipcli.exe" test run ${{ inputs.orchestratorUrl }} ${{ inputs.orchestratorTenant }} --project_path "$project" --accountForApp "${{ inputs.orchestratorLogicalName }}" --applicationId  "${{ inputs.orchestratorApplicationId }}" --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" --applicationScope "${{ orchestratorApplicationScope }}" --organizationUnit "${{ inputs.orchestratorFolderPath }}" --language en-US
+        }
