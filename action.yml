@@ -42,5 +42,5 @@ runs:
         }
         if($testsFailed -ne 0)
         {
-          throw "Workflow analysis failed"
+          throw "Tests failed"
         }
