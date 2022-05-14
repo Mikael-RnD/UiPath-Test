@@ -34,7 +34,7 @@ runs:
         foreach($project in $projectList)
         {
           Write-Host "$($project.FullName)"
-          & uipcli test run ${{ inputs.orchestratorUrl }} ${{ inputs.orchestratorTenant }} --project_path "$($project.FullName)" --accountForApp "${{ inputs.orchestratorLogicalName }}" --applicationId  "${{ inputs.orchestratorApplicationId }}" --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" --applicationScope "${{ inputs.orchestratorApplicationScope }}" --organizationUnit "${{ inputs.orchestratorFolder }}" --language en-US
+          & uipcli test run ${{ inputs.orchestratorUrl }} ${{ inputs.orchestratorTenant }} -P "$($project.FullName)" --accountForApp "${{ inputs.orchestratorLogicalName }}" --applicationId  "${{ inputs.orchestratorApplicationId }}" --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" --applicationScope "${{ inputs.orchestratorApplicationScope }}" --organizationUnit "${{ inputs.orchestratorFolder }}" --language en-US
           if($LASTEXITCODE -ne 0)
           {
             $testsFailed = 1
