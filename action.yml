@@ -30,7 +30,7 @@ runs:
       shell: pwsh
       run: |
         $testsFailed = 0
-        $projectList = Get-ChildItem -Path ${{ github.workspace }} -Recurse -Filter *.nupkg -File
+        $projectList = Get-ChildItem -Path ${{ github.workspace }} -Recurse -Filter project.json -File
         foreach($project in $projectList)
         {
           Write-Host "$($project.FullName)"
