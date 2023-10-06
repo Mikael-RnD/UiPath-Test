@@ -30,17 +30,88 @@ runs:
       shell: pwsh
       run: |
         $testsFailed = 0
+        $testResultsFolder = "${{ github.workspace }}\test-results"
         $projectList = Get-ChildItem -Path ${{ github.workspace }} -Recurse -Filter project.json -File
+        New-Item -Path $testResultsFolder -ItemType "directory"
+        $testResults = ""
+        
+        $testExecutionBaseURL = "${{ inputs.orchestratorUrl }}" + "default/DefaultTenant/orchestrator_/test/executions/"
+        $testExecutionURLs = "" 
+
+        $repositoryContainsTests = 0
         foreach($project in $projectList)
         {
-          Write-Host "$($project.FullName)"
-          & uipcli test run ${{ inputs.orchestratorUrl }} ${{ inputs.orchestratorTenant }} -P "$($project.FullName)" --accountForApp "${{ inputs.orchestratorLogicalName }}" --applicationId  "${{ inputs.orchestratorApplicationId }}" --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" --applicationScope "${{ inputs.orchestratorApplicationScope }}" --organizationUnit "${{ inputs.orchestratorFolder }}" --language en-US
-          if($LASTEXITCODE -ne 0)
-          {
-            $testsFailed = 1
+          $projectInfo=Get-Content "$($project.FullName)" | ConvertFrom-Json
+          $targetFramework = $projectInfo.targetFramework
+          
+          # If fileInfoCollection contains any entries, check for test cases set as Publishable
+          $fileInfoCollection = $projectInfo.designOptions.fileInfoCollection
+          if($fileInfoCollection.Length -gt 0){
+            # If fileInfoCollection contains any entries with editingStatus "Publishable", run tests
+            if($fileInfoCollection.Where({$_.editingStatus -eq 'Publishable'}).Count -gt 0) {
+              $repositoryContainsTests = 1
+              $testResultFilePath = $testResultsFolder+"\"+$projectInfo.name+"-testresults.json" 
+              
+              Write-Host "Running tests for project " $projectInfo.name
+              & "C:\\UiPathCLI\Win\\tools\\uipcli.exe" test run ${{ inputs.orchestratorUrl }} ${{ inputs.orchestratorTenant }} -P "$($project.FullName)" --accountForApp "${{ inputs.orchestratorLogicalName }}" --applicationId  "${{ inputs.orchestratorApplicationId }}" --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" --applicationScope "${{ inputs.orchestratorApplicationScope }}" --organizationUnit "${{ inputs.orchestratorFolder }}" --out uipath --result_path "$testResultFilePath" --language en-US
+              
+              # Printing test results to GitHub Actions log and adding results to output
+              
+              $testResultData=Get-Content $testResultFilePath | ConvertFrom-Json
+              $testCaseExecutions = $testResultData.TestSetExecutions.TestCaseExecutions
+              
+              $folderId = ${{ steps.get_folder_id.outputs.folderId }}
+              $testSetExecutionLink = $testExecutionBaseURL + $testResultData.TestSetExecutions[0].Id + "?fid=$folderId" 
+              Write-Host "Test execution can be viewed in Orchestrator by clicking this link: $testSetExecutionLink" 
+              
+              $testResultsTable = "| Test case | Result |`n| :-- | :-- |"
+              $testCaseExecutions | ForEach-Object({$testResultsTable += "`n| " + $_.Name  + " | " + $_.Status + " |"})
+              $testResults += "`n### [Test results for " + $testResultData.TestSetExecutions[0].Name + "]("+ $testSetExecutionLink +")`n" + $testResultsTable
+              
+              $testCaseExecutions |  Format-Table -Property Name, DataVariationIdentifier, Status
+
+
+              if($testExecutionURLs -eq ""){
+                $testExecutionURLs = $testSetExecutionLink
+              }
+              else {
+                $testExecutionURLs = $testExecutionURLs + " , " + $testSetExecutionLink
+              }
+
+              if($LASTEXITCODE -ne 0)
+              {
+                $testsFailed = 1
+              }
+            }
+            else {
+              Write-Host $projectInfo.name " contains no test cases set as publishable. Testing skipped."
+            }
           }
+          else {
+            Write-Host $projectInfo.name " contains no test cases. Testing skipped."
+          }
+        }
+
+        # Set output values
+        Write-Output "testExecutionLinks=$($testExecutionURLs)" >> $Env:GITHUB_OUTPUT
+        
+        echo 'testResults<<EOF' >> $Env:GITHUB_OUTPUT
+        echo $testResults.Trim() >> $Env:GITHUB_OUTPUT
+        echo EOF >> $Env:GITHUB_OUTPUT
+
+        # Create text file with note on tests not existing.
+        if($repositoryContainsTests -eq 0){
+          "No publishable UiPath test cases were found in this repository. Testing has been skipped. " | Out-File $testResultsFolder\"test.txt"
         }
         if($testsFailed -ne 0)
         {
           throw "Tests failed"
         }
+
+    - id: print_outputs
+      name: Print outputs
+      if: always()
+      shell: pwsh
+      run: | 
+        echo "${{ steps.run_tests.outputs.testExecutionLinks }}"
+        echo "${{ steps.run_tests.outputs.testResults }}"
