@@ -1,6 +1,9 @@
 name: 'UiPath Test'
 description: 'Runs test cases within a UiPath project'
 inputs:
+  projectFilePaths:
+    description: 'Used for passing explicit paths to project files to perform analysis. Can be used as multi-line inputs'
+    required: false
   orchestratorUrl: 
     description: 'Orchestrator instance URL'
     required: true
@@ -22,15 +25,64 @@ inputs:
   orchestratorLogicalName:
     description: 'Logical name for Orchestrator organization'
     required: true
-
+outputs:
+  testExecutionLinks:
+    description: 'Outputs a comma-separated list of Orchestrator links for viewing test results'
+    value: ${{ steps.run_tests.outputs.testExecutionLinks }}
+  testResults:
+    description: 'Markdown formatted table listing the tests that have been run and whether they passed or failed'
+    value: ${{ steps.run_tests.outputs.testResults }}
+    
 runs:
   using: "composite"
   steps:
-    - name: Test
+    - id: get_folder_id
+      name: Get Folder ID
+      shell: pwsh
+      run: |
+        $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+        $headers.Add("Content-Type", "application/x-www-form-urlencoded")
+
+        $orchestratorURL = "${{ inputs.orchestratorUrl }}".TrimEnd("/")
+        $clientId = [System.Web.HttpUtility]::UrlEncode("${{ inputs.orchestratorApplicationId }}")
+        $clientSecret = [System.Web.HttpUtility]::UrlEncode("${{ inputs.orchestratorApplicationSecret }}") 
+        $scope = [System.Web.HttpUtility]::UrlEncode("${{ inputs.orchestratorApplicationScope }}")
+
+        $body = "grant_type=client_credentials&client_id=$clientId&client_secret=$clientSecret&scope=$scope"
+        $authResponse = Invoke-RestMethod "$orchestratorURL/identity_/connect/token" -Method 'POST' -Headers $headers -Body $body
+        $authResponse | ConvertTo-Json | Out-Null
+        $accessToken = $authResponse.access_token
+
+        $folderName = "'${{ inputs.orchestratorFolder }}'"
+        $parameters = "`$Filter=FullyQualifiedName eq $folderName"
+        $folderRequestURL = "$orchestratorURL/${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$parameters"
+        $folderRequestHeaders = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+        $folderRequestHeaders.Add("Authorization", "Bearer $accessToken")
+        $folderRequestResponse = Invoke-RestMethod $folderRequestURL -Method 'GET' -Headers $folderRequestHeaders
+        $folderRequestResponse | ConvertTo-Json 
+        $folderId = $folderRequestResponse.value[0].Id
+        Write-Output "folderId=$($folderId)" >> $Env:GITHUB_OUTPUT
+  
+    - id: run_tests
+      name: Test
       shell: pwsh
       run: |
         $testsFailed = 0
         $testResultsFolder = "${{ github.workspace }}\test-results"
+        
+        if([string]::IsNullOrEmpty("${{ inputs.projectFilePaths }}")) 
+        {
+          Write-Host "Scanning full repository directory for project.json files"
+          $projectJsonFiles = Get-ChildItem -Path ${{ github.workspace }} -Recurse -Filter project.json -File
+        } 
+        else 
+        {
+          Write-Host "Getting full path for files given as inputs"
+          $projectJsonFiles = "${{ inputs.projectFilePaths }}".Trim()
+          $projectJsonFiles = $projectJsonFiles -split "`r`n"
+          $projectJsonFiles | Where { -not  [string]::IsNullOrWhiteSpace($_) } | Get-ChildItem -File
+        }
+        
         $projectList = Get-ChildItem -Path ${{ github.workspace }} -Recurse -Filter project.json -File
         New-Item -Path $testResultsFolder -ItemType "directory"
         $testResults = ""
@@ -39,8 +91,10 @@ runs:
         $testExecutionURLs = "" 
 
         $repositoryContainsTests = 0
-        foreach($project in $projectList)
+        
+        foreach($p in $projectJsonFiles)
         {
+          $project = [System.IO.FileInfo]$p
           $projectInfo=Get-Content "$($project.FullName)" | ConvertFrom-Json
           $targetFramework = $projectInfo.targetFramework
           
