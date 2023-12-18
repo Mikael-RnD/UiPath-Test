@@ -87,7 +87,7 @@ runs:
         New-Item -Path $testResultsFolder -ItemType "directory"
         $testResults = ""
         
-        $testExecutionBaseURL = "${{ inputs.orchestratorUrl }}" + "default/DefaultTenant/orchestrator_/test/executions/"
+        $testExecutionBaseURL = "${{ inputs.orchestratorUrl }}" + "${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
         $testExecutionURLs = "" 
 
         $repositoryContainsTests = 0
