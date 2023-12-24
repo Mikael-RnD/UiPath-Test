@@ -107,7 +107,16 @@ runs:
               $testResultFilePath = $testResultsFolder+"\"+$projectInfo.name+"-testresults.json" 
               
               Write-Host "Running tests for project " $projectInfo.name
-              & uipcli test run ${{ inputs.orchestratorUrl }} ${{ inputs.orchestratorTenant }} -P "$($project.FullName)" --accountForApp "${{ inputs.orchestratorLogicalName }}" --applicationId  "${{ inputs.orchestratorApplicationId }}" --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" --applicationScope "${{ inputs.orchestratorApplicationScope }}" --organizationUnit "${{ inputs.orchestratorFolder }}" --out uipath --result_path "$testResultFilePath" --language en-US
+              uipcli test run ${{ inputs.orchestratorUrl }} ${{ inputs.orchestratorTenant }} `
+                --project-path "$($project.FullName)" `
+                --accountForApp "${{ inputs.orchestratorLogicalName }}" `
+                --applicationId  "${{ inputs.orchestratorApplicationId }}" `
+                --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" `
+                --applicationScope "${{ inputs.orchestratorApplicationScope }}" `
+                --organizationUnit "${{ inputs.orchestratorFolder }}" `
+                --out uipath `
+                --result_path "$testResultFilePath" `
+                --language en-US
               
               # Printing test results to GitHub Actions log and adding results to output
               
