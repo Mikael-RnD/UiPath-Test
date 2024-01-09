@@ -166,6 +166,9 @@ runs:
         if($repositoryContainsTests -eq 0){
           "No publishable UiPath test cases were found in this repository. Testing has been skipped. " | Out-File $testResultsFolder\"test.txt"
         }
+
+        echo $testResults >> $Env:GITHUB_STEP_SUMMARY
+
         if($testsFailed -ne 0)
         {
           throw "Tests failed"
