@@ -128,7 +128,7 @@ runs:
               Write-Host "Test execution can be viewed in Orchestrator by clicking this link: $testSetExecutionLink" 
               
               $testResultsTable = "| Test case | Result |`n| :-- | :-- |"
-              $testCaseExecutions | ForEach-Object({$testResultsTable += "`n| " + $_.Name  + " | " + $_.Status + " |"})
+              $testCaseExecutions | ForEach-Object({$testResultsTable += "`n| " + $_.Name  + " | " + (&{If($($_.Status) -eq "Passed") {":white_check_mark: Passed"} Else {":x: Failed"}}) + " |"})
               $testResults += "`n### [Test results for " + $testResultData.TestSetExecutions[0].Name + "]("+ $testSetExecutionLink +")`n" + $testResultsTable
               
               $testCaseExecutions |  Format-Table -Property Name, DataVariationIdentifier, Status
