@@ -3,7 +3,7 @@ GitHub Action for running all publishable test cases in UiPath projects. Detaile
 
 Outputs: 
 - testExecutionLinks - Comma-separated list of URLs to directly access the test execution(s) triggered by this action
-- testResults - Markdown formatted table listing the tests that have been run and whether they passed or failed
+- testResults - Markdown formatted table listing the tests that have been run and whether they passed or failed. Each project tested get its table with a link to the test run in Orchestrator as part of its header
 
 Example usage:
 
