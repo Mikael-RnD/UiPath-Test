@@ -1,33 +1,53 @@
 # UiPath-Test
-GitHub Action for running all publishable test cases in UiPath projects. Detailed test results are provided in json format from this action. They can also be found by navigating to the Testing tab in UiPath Orchestrator. Built as a wrapper around the [UiPath CLI task for running tests from a UiPath project](https://docs.uipath.com/test-suite/automation-suite/2022.10/user-guide/executing-tasks-cli#testing-a-package%2Frunning-a-test-set)
+GitHub Action for running all publishable test cases in UiPath projects. Detailed test results are provided in json format from this action. They can also be found by navigating to the Testing tab in UiPath Orchestrator. Built as a wrapper around the [UiPath CLI task for running tests from a UiPath project](https://docs.uipath.com/test-suite/automation-suite/2023.10/user-guide/testing-a-packagerunning-a-test-set)
 
-## Example usage:
+## Example usage
 
-      # Run all publishable unit tests from UiPath in this repository
+### Minimum required inputs
+
+Using the minimum required inputs to this action assumes that the action is intended to run tests for all projects in the repository, targeting a tenant/organization within UiPath Automation Cloud, with the credentials for an external application that has been configured with the default application scopes noted [here](https://docs.uipath.com/test-suite/automation-suite/2023.10/user-guide/testing-a-packagerunning-a-test-set).
+
+      # Run all publishable unit tests from UiPath projects in this repository
       - name: UiPath Test
         uses: RPA-Global/UiPath-Test@v0
         with:
-          # All inputs are required
-          orchestratorUrl: # Link to UiPath Orchestrator instance
-          orchestratorTenant: # Name of tenant where packages are deployed
-          orchestratorFolder: # Orchestrator Folder path where packages are deployed
-          orchestratorApplicationId: # Applicaiton id for external application
-          orchestratorApplicationSecret: # Application secret for external application
-          orchestratorApplicationScope: # External application scope
-          orchestratorLogicalName: # Logical name for Orchestrator tenant
+          orchestratorTenant: TestTenant
+          orchestratorFolder: Finance/SE
+          orchestratorApplicationId: ${{ secrets.ORCHESTRATOR_APP_ID }}
+          orchestratorApplicationSecret: ${{ secrets.ORCHESTRATOR_APP_SECRET }}
+          orchestratorLogicalName: testorg
+
+### All inputs used
+
+The example below illustrates how the action can be used for a repository of multiple UiPath projects, where two specific projects are intended to be tested. This example also illustrates the outputs needed when targeting a non-Automation Cloud Orchestrator setup.
+
+      # Run all publishable unit tests from the projects Perfomer/project.json and Dispatcher/project.json, targeting an Orchestrator instance in an internal environment 
+      - name: UiPath Test
+        uses: RPA-Global/UiPath-Test@v0
+        with:
+          projectFilePaths: |
+            Performer/project.json
+            Dispatcher/project.json
+          orchestratorUrl: https://mycompany.orchestrator.com/
+          orchestratorTenant: TestTenant
+          orchestratorFolder: IT/Special
+          orchestratorApplicationId: ${{ secrets.ORCHESTRATOR_APP_ID }}
+          orchestratorApplicationSecret: ${{ secrets.ORCHESTRATOR_APP_SECRET }}
+          orchestratorApplicationScope: "OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSets OR.TestSetExecutions OR.TestSetSchedules OR.Users.Read"
+          orchestratorLogicalName: myorg
 
 ## Inputs
 
-|Name|Description|Required|Example value|
-|:--|:--|:--|:--|
-|projectFilePaths|Multiline input containing a list of projects to perform the operations on. If left empty, the action scans for any project.json files in the repository|False|TheProject/project.json|
-|orchestratorUrl|Base URL to Orchestrator instance|True|https://cloud.uipath.com/|
-|orchestratorTenant|Name of the Orchestrator tenant|True|TestTenant|
-|orchestratorLogicalName|Id of the UiPath organization|True|testorg|
-|orchestratorFolder|The fully qualified name of the Orchestrator folder where processes are deployed to|True|Finance/SE|
-|orchestratorApplicationId|Application ID for the CLI to authenticate with UiPath Orchestrator|True||
-|orchestratorApplicationSecret|Application Secret for the CLI to authenticate with UiPath Orchestrator|True||
-|orchestratorApplicationScope|External application scope|True|"OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSets OR.TestSetExecutions OR.TestSetSchedules OR.Users.Read"|
+|Name|Description|Required|Default value|Example value|
+|:--|:--|:--|:--|:--|
+|projectFilePaths|Multiline input containing a list of projects to perform the operations on. If left empty, the action scans for any project.json files in the repository|False||TheProject/project.json|
+|orchestratorUrl|Base URL to Orchestrator instance|False|https://cloud.uipath.com/|https://mycompany.orchestrator.com/|
+|orchestratorTenant|Name of the Orchestrator tenant|True||TestTenant|
+|orchestratorLogicalName|Id of the UiPath organization|True||testorg|
+|orchestratorFolder|The fully qualified name of the Orchestrator folder where processes are deployed to|True||Finance/SE|
+|orchestratorApplicationId|Application ID for the CLI to authenticate with UiPath Orchestrator|True||${{ secrets.ORCHESTRATOR_APP_ID }}|
+|orchestratorApplicationSecret|Application Secret for the CLI to authenticate with UiPath Orchestrator|True||${{ secrets.ORCHESTRATOR_APP_SECRET }}|
+|orchestratorApplicationScope|External application scope|False|"OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSets OR.TestSetExecutions OR.TestSetSchedules OR.Users.Read"||
 
 ## Outputs
 
