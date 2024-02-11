@@ -9,6 +9,7 @@ The action triggers test cases to be run by robots through UiPath Orchestrator a
 ## Setup
 
 This action requires the following things to be set up in UiPath Orchestrator:
+
 - UiPath CLI installed on GitHub Actions Runner. This can be done by running the [setup-uipath action](https://github.com/Mikael-RnD/setup-uipath) before this action
 - Test robots connected to the target folder/tenant in UiPath Orchestrator
 - [An external application created in Orchestrator](https://docs.uipath.com/automation-cloud/automation-cloud/latest/admin-guide/managing-external-applications) with the access scopes specified in the [UiPath CLI documentation](https://docs.uipath.com/test-suite/automation-cloud/latest/user-guide/executing-tasks-cli). With the credentials passed to this actions input from GitHub Secrets (or other safe credential stores)
@@ -19,6 +20,7 @@ This action requires the following things to be set up in UiPath Orchestrator:
 
 Using the minimum required inputs to this action assumes that the action is intended to run tests for all projects in the repository, targeting a tenant/organization within UiPath Automation Cloud, with the credentials for an external application that has been configured with the default application scopes noted [here.](https://docs.uipath.com/test-suite/automation-suite/2023.10/user-guide/testing-a-packagerunning-a-test-set)
 
+```yml
       # Run all publishable unit tests from UiPath projects in this repository, targeting an organization and tenant in UiPath Automation Cloud
       - name: UiPath Test
         uses: RPA-Global/UiPath-Test@v0
@@ -28,10 +30,13 @@ Using the minimum required inputs to this action assumes that the action is inte
           orchestratorApplicationId: ${{ secrets.ORCHESTRATOR_APP_ID }}
           orchestratorApplicationSecret: ${{ secrets.ORCHESTRATOR_APP_SECRET }}
           orchestratorLogicalName: testorg
+```
 
 ### All inputs used
 
 The example below illustrates how the action can be used for a repository of multiple UiPath projects, where two specific projects are intended to be tested. This example also illustrates the inputs needed when targeting a non-Automation Cloud Orchestrator setup.
+
+```yml
 
       # Run all publishable unit tests from the projects Perfomer/project.json and Dispatcher/project.json, targeting an Orchestrator instance in an internal environment 
       - name: UiPath Test
@@ -47,6 +52,8 @@ The example below illustrates how the action can be used for a repository of mul
           orchestratorApplicationSecret: ${{ secrets.ORCHESTRATOR_APP_SECRET }}
           orchestratorApplicationScope: "OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSets OR.TestSetExecutions OR.TestSetSchedules OR.Users.Read"
           orchestratorLogicalName: myorg
+
+```
 
 ## Inputs
 
