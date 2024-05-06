@@ -55,6 +55,8 @@ The example below illustrates how the action can be used for a repository of mul
 
 ```
 
+- :warning: **HejDå**
+
 ## Inputs
 
 |Name|Description|Required|Default value|Example value|
@@ -73,4 +75,4 @@ The example below illustrates how the action can be used for a repository of mul
 |Name|Description|
 |:--|:--|
 |**testExecutionLinks**|Comma-separated list of URLs to directly access the test execution(s) triggered by this action|
-|**testResults**|Markdown formatted table listing the tests that have been run and whether they passed or failed. Each project tested gets its table with a link to the test execution(s) in Orchestrator as part of its header|
+|**testResults**|Markdown formatted table listing the tests that have been run and whether they passed or failed. Each project tested gets its table with a link to the test execution(s) in Orchestrator as part of its header. If no test cases were found for a project, nor set as publishable, a warning message is added.|

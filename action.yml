@@ -34,7 +34,7 @@ outputs:
   testResults:
     description: 'Markdown formatted table listing the tests that have been run and whether they passed or failed'
     value: ${{ steps.run_tests.outputs.testResults }}
-    
+
 runs:
   using: "composite"
   steps:
@@ -150,10 +150,12 @@ runs:
             }
             else {
               Write-Host $projectInfo.name " contains no test cases set as publishable. Testing skipped."
+              $testResults += "`n- :warning: **" + $projectInfo.name + " contains no test cases set as publishable. Testing skipped.**`n"	
             }
           }
           else {
             Write-Host $projectInfo.name " contains no test cases. Testing skipped."
+            $testResults += "`n- :warning: **" + $projectInfo.name + " contains no test cases. Testing skipped.**`n"	
           }
         }
 
