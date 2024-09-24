@@ -34,6 +34,9 @@ outputs:
   testResults:
     description: 'Markdown formatted table listing the tests that have been run and whether they passed or failed'
     value: ${{ steps.run_tests.outputs.testResults }}
+  containsPublishableTestCases:
+    description: 'Boolean value indicating whether any test cases set as publishable were found in the repository'
+    value: ${{ steps.run_tests.outputs.containsPublishableTestCases }}
 
 runs:
   using: "composite"
@@ -169,6 +172,10 @@ runs:
         # Create text file with note on tests not existing.
         if($repositoryContainsTests -eq 0){
           "No publishable UiPath test cases were found in this repository. Testing has been skipped. " | Out-File $testResultsFolder\"test.txt"
+          Write-Output "containsPublishableTestCases=false" >> $Env:GITHUB_OUTPUT        
+        }
+        else {
+          Write-Output "containsPublishableTestCases=true" >> $Env:GITHUB_OUTPUT
         }
 
         echo $testResults >> $Env:GITHUB_STEP_SUMMARY
