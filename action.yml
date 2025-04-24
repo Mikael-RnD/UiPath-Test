@@ -48,19 +48,34 @@ runs:
         headers="Content-Type: application/x-www-form-urlencoded"
         orchestratorURL="${{ inputs.orchestratorUrl }}"
         orchestratorURL="${orchestratorURL%/}"
+
+        # URL encode inputs
         clientId=$(echo -n "${{ inputs.orchestratorApplicationId }}" | jq -sRr @uri)
         clientSecret=$(echo -n "${{ inputs.orchestratorApplicationSecret }}" | jq -sRr @uri)
         scope=$(echo -n "${{ inputs.orchestratorApplicationScope }}" | jq -sRr @uri)
 
+        # Prepare body for the token request
         body="grant_type=client_credentials&client_id=$clientId&client_secret=$clientSecret&scope=$scope"
-        authResponse=$(curl -s -X POST "$orchestratorURL/identity_/connect/token" -H "$headers" -d "$body")
+        authResponse=$(curl -s -X POST "$orchestratorURL/identity_/connect/token" -H "${headers[@]}" -d "$body")
         accessToken=$(echo "$authResponse" | jq -r '.access_token')
 
-        folderName="${{ inputs.orchestratorFolder }}"
-        parameters="\$Filter=FullyQualifiedName eq '$folderName'"
-        folderRequestURL="$orchestratorURL/${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$parameters"
-        folderId=$(curl -s -X GET "$folderRequestURL" -H "Authorization: Bearer $accessToken" | jq -r '.value[0].Id')
+        if [ "$accessToken" == "null" ]; then
+          echo "Error: Failed to obtain access token. Response: $authResponse"
+          exit 1
+        fi
 
+        # Prepare folder request
+        folderName="${{ inputs.orchestratorFolder }}"
+        parameters="\$filter=FullyQualifiedName eq '$folderName'"
+        encodedParameters=$(jq -rn --arg params "$parameters" '$params | @uri')
+        echo $encodedParameters
+
+        folderRequestURL="$orchestratorURL/${{ inputs.organizationId }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$encodedParameters"
+        folderRequestHeaders=("Authorization: Bearer ${{ steps.get-orchestrator-token.outputs.accessToken }}")
+        
+        # Get folder ID
+        folderRequestResponse=$(curl -s -X GET "$folderRequestURL" -H "${folderRequestHeaders[@]}")
+        folderId=$(echo "$folderRequestResponse" | jq -r '.value[0].Id')
         echo "folderId=$folderId" >> $GITHUB_OUTPUT
 
     - id: run_tests
@@ -107,7 +122,7 @@ runs:
                 --language en-US
 
               testResultData=$(cat "$testResultFilePath" | jq '.')
-              testCaseExecutions=$(echo "$testResultData" | jq '.TestSetExecutions.TestCaseExecutions')
+              testCaseExecutions=$(echo "$testResultData" | jq -c '.TestSetExecutions[] | .TestCaseExecutions')
               folderId="${{ steps.get_folder_id.outputs.folderId }}"
               testSetExecutionLink="$testExecutionBaseURL$(echo "$testResultData" | jq -r '.TestSetExecutions[0].Id')?fid=$folderId"
 
