@@ -141,7 +141,7 @@ runs:
                 testExecutionURLs="$testSetExecutionLink"
               else
                 testExecutionURLs+=", $testSetExecutionLink"
-              
+              fi
 
               if [ $? -ne 0 ]; then
                 testsFailed=1
