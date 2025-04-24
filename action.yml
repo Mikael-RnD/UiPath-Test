@@ -47,6 +47,7 @@ runs:
       run: |
         headers="Content-Type: application/x-www-form-urlencoded"
         orchestratorURL="${{ inputs.orchestratorUrl }}"
+        orchestratorURL="${orchestratorURL%/}"
         clientId=$(echo -n "${{ inputs.orchestratorApplicationId }}" | jq -sRr @uri)
         clientSecret=$(echo -n "${{ inputs.orchestratorApplicationSecret }}" | jq -sRr @uri)
         scope=$(echo -n "${{ inputs.orchestratorApplicationScope }}" | jq -sRr @uri)
