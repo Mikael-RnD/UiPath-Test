@@ -4,8 +4,6 @@ GitHub Action for running all publishable test cases in UiPath projects. Detaile
 
 The action triggers test cases to be run by robots through UiPath Orchestrator and writes the test result outputs to the [GitHub Actions job summary](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary). See the setup section below on requirements for running test cases.
 
-**Note:** The current version of this action only works on Windows runners
-
 ## Setup
 
 This action requires the following things to be set up in UiPath Orchestrator:
@@ -23,7 +21,7 @@ Using the minimum required inputs to this action assumes that the action is inte
 ```yml
       # Run all publishable unit tests from UiPath projects in this repository, targeting an organization and tenant in UiPath Automation Cloud
       - name: UiPath Test
-        uses: RPA-Global/UiPath-Test@v0
+        uses: RPA-Global/UiPath-Test@v1
         with:
           orchestratorTenant: TestTenant
           orchestratorFolder: Finance/SE
@@ -40,7 +38,7 @@ The example below illustrates how the action can be used for a repository of mul
 
       # Run all publishable unit tests from the projects Perfomer/project.json and Dispatcher/project.json, targeting an Orchestrator instance in an internal environment 
       - name: UiPath Test
-        uses: RPA-Global/UiPath-Test@v0
+        uses: RPA-Global/UiPath-Test@v1
         with:
           projectFilePaths: |
             Performer/project.json
