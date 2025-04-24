@@ -64,11 +64,18 @@ runs:
           exit 1
         fi
 
+        # Prepare folder request
         folderName="${{ inputs.orchestratorFolder }}"
-        parameters="\$Filter=FullyQualifiedName eq '$folderName'"
-        folderRequestURL="$orchestratorURL/${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$parameters"
-        folderId=$(curl -s -X GET "$folderRequestURL" -H "Authorization: Bearer $accessToken" | jq -r '.value[0].Id')
+        parameters="\$filter=FullyQualifiedName eq '$folderName'"
+        encodedParameters=$(jq -rn --arg params "$parameters" '$params | @uri')
+        echo $encodedParameters
 
+        folderRequestURL="$orchestratorURL/${{ inputs.organizationId }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$encodedParameters"
+        folderRequestHeaders=("Authorization: Bearer ${{ steps.get-orchestrator-token.outputs.accessToken }}")
+        
+        # Get folder ID
+        folderRequestResponse=$(curl -s -X GET "$folderRequestURL" -H "${folderRequestHeaders[@]}")
+        folderId=$(echo "$folderRequestResponse" | jq -r '.value[0].Id')
         echo "folderId=$folderId" >> $GITHUB_OUTPUT
 
     - id: run_tests
