@@ -122,7 +122,7 @@ runs:
                 --language en-US
 
               testResultData=$(cat "$testResultFilePath" | jq '.')
-              testCaseExecutions=$(echo "$testResultData" | jq '.TestSetExecutions.TestCaseExecutions')
+              testCaseExecutions=$(echo "$testResultData" | jq -c '.TestSetExecutions[] | .TestCaseExecutions')
               folderId="${{ steps.get_folder_id.outputs.folderId }}"
               testSetExecutionLink="$testExecutionBaseURL$(echo "$testResultData" | jq -r '.TestSetExecutions[0].Id')?fid=$folderId"
 
@@ -141,7 +141,7 @@ runs:
                 testExecutionURLs="$testSetExecutionLink"
               else
                 testExecutionURLs+=", $testSetExecutionLink"
-              fi
+              
 
               if [ $? -ne 0 ]; then
                 testsFailed=1
