@@ -48,13 +48,21 @@ runs:
         headers="Content-Type: application/x-www-form-urlencoded"
         orchestratorURL="${{ inputs.orchestratorUrl }}"
         orchestratorURL="${orchestratorURL%/}"
+
+        # URL encode inputs
         clientId=$(echo -n "${{ inputs.orchestratorApplicationId }}" | jq -sRr @uri)
         clientSecret=$(echo -n "${{ inputs.orchestratorApplicationSecret }}" | jq -sRr @uri)
         scope=$(echo -n "${{ inputs.orchestratorApplicationScope }}" | jq -sRr @uri)
 
+        # Prepare body for the token request
         body="grant_type=client_credentials&client_id=$clientId&client_secret=$clientSecret&scope=$scope"
-        authResponse=$(curl -s -X POST "$orchestratorURL/identity_/connect/token" -H "$headers" -d "$body")
+        authResponse=$(curl -s -X POST "$orchestratorURL/identity_/connect/token" -H "${headers[@]}" -d "$body")
         accessToken=$(echo "$authResponse" | jq -r '.access_token')
+
+        if [ "$accessToken" == "null" ]; then
+          echo "Error: Failed to obtain access token. Response: $authResponse"
+          exit 1
+        fi
 
         folderName="${{ inputs.orchestratorFolder }}"
         parameters="\$Filter=FullyQualifiedName eq '$folderName'"
