@@ -43,152 +43,124 @@ runs:
   steps:
     - id: get_folder_id
       name: Get Folder ID
-      shell: pwsh
+      shell: bash
       run: |
-        $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-        $headers.Add("Content-Type", "application/x-www-form-urlencoded")
+        headers="Content-Type: application/x-www-form-urlencoded"
+        orchestratorURL="${{ inputs.orchestratorUrl%/ }}"
+        clientId=$(echo -n "${{ inputs.orchestratorApplicationId }}" | jq -sRr @uri)
+        clientSecret=$(echo -n "${{ inputs.orchestratorApplicationSecret }}" | jq -sRr @uri)
+        scope=$(echo -n "${{ inputs.orchestratorApplicationScope }}" | jq -sRr @uri)
 
-        $orchestratorURL = "${{ inputs.orchestratorUrl }}".TrimEnd("/")
-        $clientId = [System.Web.HttpUtility]::UrlEncode("${{ inputs.orchestratorApplicationId }}")
-        $clientSecret = [System.Web.HttpUtility]::UrlEncode("${{ inputs.orchestratorApplicationSecret }}") 
-        $scope = [System.Web.HttpUtility]::UrlEncode("${{ inputs.orchestratorApplicationScope }}")
+        body="grant_type=client_credentials&client_id=$clientId&client_secret=$clientSecret&scope=$scope"
+        authResponse=$(curl -s -X POST "$orchestratorURL/identity_/connect/token" -H "$headers" -d "$body")
+        accessToken=$(echo "$authResponse" | jq -r '.access_token')
 
-        $body = "grant_type=client_credentials&client_id=$clientId&client_secret=$clientSecret&scope=$scope"
-        $authResponse = Invoke-RestMethod "$orchestratorURL/identity_/connect/token" -Method 'POST' -Headers $headers -Body $body
-        $authResponse | ConvertTo-Json | Out-Null
-        $accessToken = $authResponse.access_token
+        folderName="${{ inputs.orchestratorFolder }}"
+        parameters="\$Filter=FullyQualifiedName eq '$folderName'"
+        folderRequestURL="$orchestratorURL/${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$parameters"
+        folderId=$(curl -s -X GET "$folderRequestURL" -H "Authorization: Bearer $accessToken" | jq -r '.value[0].Id')
 
-        $folderName = "'${{ inputs.orchestratorFolder }}'"
-        $parameters = "`$Filter=FullyQualifiedName eq $folderName"
-        $folderRequestURL = "$orchestratorURL/${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$parameters"
-        $folderRequestHeaders = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-        $folderRequestHeaders.Add("Authorization", "Bearer $accessToken")
-        $folderRequestResponse = Invoke-RestMethod $folderRequestURL -Method 'GET' -Headers $folderRequestHeaders
-        $folderRequestResponse | ConvertTo-Json 
-        $folderId = $folderRequestResponse.value[0].Id
-        Write-Output "folderId=$($folderId)" >> $Env:GITHUB_OUTPUT
-  
+        echo "folderId=$folderId" >> $GITHUB_OUTPUT
+
     - id: run_tests
       name: Test
-      shell: pwsh
+      shell: bash
       run: |
-        $testsFailed = 0
-        $testResultsFolder = "${{ github.workspace }}\test-results"
-        
-        if([string]::IsNullOrEmpty("${{ inputs.projectFilePaths }}")) 
-        {
-          Write-Host "Scanning full repository directory for project.json files"
-          $projectJsonFiles = Get-ChildItem -Path ${{ github.workspace }} -Recurse -Filter project.json -File
-        } 
-        else 
-        {
-          Write-Host "Getting full path for files given as inputs"
-          $projectJsonFiles = "${{ inputs.projectFilePaths }}".Trim()
-          $projectJsonFiles = $projectJsonFiles -split "`r`n"
-          $projectJsonFiles | Where { -not  [string]::IsNullOrWhiteSpace($_) } | Get-ChildItem -File
-        }
-        
-        $projectList = Get-ChildItem -Path ${{ github.workspace }} -Recurse -Filter project.json -File
-        New-Item -Path $testResultsFolder -ItemType "directory"
-        $testResults = ""
-        
-        $testExecutionBaseURL = "${{ inputs.orchestratorUrl }}" + "${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
-        $testExecutionURLs = "" 
+        testsFailed=0
+        testResultsFolder="${{ github.workspace }}/test-results"
+        mkdir -p "$testResultsFolder"
+        testResults=""
+        testExecutionBaseURL="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
+        testExecutionURLs=""
+        repositoryContainsTests=0
 
-        $repositoryContainsTests = 0
-        
-        foreach($p in $projectJsonFiles)
-        {
-          $project = [System.IO.FileInfo]$p
-          $projectInfo=Get-Content "$($project.FullName)" | ConvertFrom-Json
-          $targetFramework = $projectInfo.targetFramework
-          
-          # If fileInfoCollection contains any entries, check for test cases set as Publishable
-          $fileInfoCollection = $projectInfo.designOptions.fileInfoCollection
-          if($fileInfoCollection.Length -gt 0){
-            # If fileInfoCollection contains any entries with editingStatus "Publishable", run tests
-            if($fileInfoCollection.Where({$_.editingStatus -eq 'Publishable'}).Count -gt 0) {
-              $repositoryContainsTests = 1
-              $testResultFilePath = $testResultsFolder+"\"+$projectInfo.name+"-testresults.json" 
-              
-              Write-Host "Running tests for project " $projectInfo.name
-              uipcli test run ${{ inputs.orchestratorUrl }} ${{ inputs.orchestratorTenant }} `
-                --project-path "$($project.FullName)" `
-                --accountForApp "${{ inputs.orchestratorLogicalName }}" `
-                --applicationId  "${{ inputs.orchestratorApplicationId }}" `
-                --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" `
-                --applicationScope "${{ inputs.orchestratorApplicationScope }}" `
-                --organizationUnit "${{ inputs.orchestratorFolder }}" `
-                --out uipath `
-                --result_path "$testResultFilePath" `
+        if [ -z "${{ inputs.projectFilePaths }}" ]; then
+          echo "Scanning full repository directory for project.json files"
+          projectJsonFiles=$(find "${{ github.workspace }}" -type f -name "project.json")
+        else
+          echo "Getting full path for files given as inputs"
+          projectJsonFiles=$(echo "${{ inputs.projectFilePaths }}" | tr '\r\n' '\n')
+        fi
+
+        for projectFile in $projectJsonFiles; do
+          projectInfo=$(cat "$projectFile" | jq '.')
+          targetFramework=$(echo "$projectInfo" | jq -r '.targetFramework')
+          fileInfoCollection=$(echo "$projectInfo" | jq -r '.designOptions.fileInfoCollection')
+
+          if [ "$(echo "$fileInfoCollection" | jq length)" -gt 0 ]; then
+            publishableTests=$(echo "$fileInfoCollection" | jq '[.[] | select(.editingStatus == "Publishable")] | length')
+            if [ "$publishableTests" -gt 0 ]; then
+              repositoryContainsTests=1
+              testResultFilePath="$testResultsFolder/$(echo "$projectInfo" | jq -r '.name')-testresults.json"
+
+              echo "Running tests for project $(echo "$projectInfo" | jq -r '.name')"
+              uipcli test run "${{ inputs.orchestratorUrl }}" "${{ inputs.orchestratorTenant }}" \
+                --project-path "$projectFile" \
+                --accountForApp "${{ inputs.orchestratorLogicalName }}" \
+                --applicationId "${{ inputs.orchestratorApplicationId }}" \
+                --applicationSecret "${{ inputs.orchestratorApplicationSecret }}" \
+                --applicationScope "${{ inputs.orchestratorApplicationScope }}" \
+                --organizationUnit "${{ inputs.orchestratorFolder }}" \
+                --out uipath \
+                --result_path "$testResultFilePath" \
                 --language en-US
-              
-              # Printing test results to GitHub Actions log and adding results to output
-              
-              $testResultData=Get-Content $testResultFilePath | ConvertFrom-Json
-              $testCaseExecutions = $testResultData.TestSetExecutions.TestCaseExecutions
-              
-              $folderId = ${{ steps.get_folder_id.outputs.folderId }}
-              $testSetExecutionLink = $testExecutionBaseURL + $testResultData.TestSetExecutions[0].Id + "?fid=$folderId" 
-              Write-Host "Test execution can be viewed in Orchestrator by clicking this link: $testSetExecutionLink" 
-              
-              $testResultsTable = "| Test case | Result |`n| :-- | :-- |"
-              $testCaseExecutions | ForEach-Object({$testResultsTable += "`n| " + $_.Name  + " | " + (&{If($($_.Status) -eq "Passed") {":white_check_mark: Passed"} Else {":x: Failed"}}) + " |"})
-              $testResults += "`n### [Test results for " + $testResultData.TestSetExecutions[0].Name + "]("+ $testSetExecutionLink +")`n" + $testResultsTable
-              
-              $testCaseExecutions |  Format-Table -Property Name, DataVariationIdentifier, Status
 
+              testResultData=$(cat "$testResultFilePath" | jq '.')
+              testCaseExecutions=$(echo "$testResultData" | jq '.TestSetExecutions.TestCaseExecutions')
+              folderId="${{ steps.get_folder_id.outputs.folderId }}"
+              testSetExecutionLink="$testExecutionBaseURL$(echo "$testResultData" | jq -r '.TestSetExecutions[0].Id')?fid=$folderId"
 
-              if($testExecutionURLs -eq ""){
-                $testExecutionURLs = $testSetExecutionLink
-              }
-              else {
-                $testExecutionURLs = $testExecutionURLs + " , " + $testSetExecutionLink
-              }
+              echo "Test execution can be viewed in Orchestrator by clicking this link: $testSetExecutionLink"
 
-              if($LASTEXITCODE -ne 0)
-              {
-                $testsFailed = 1
-              }
-            }
-            else {
-              Write-Host $projectInfo.name " contains no test cases set as publishable. Testing skipped."
-              $testResults += "`n- :warning: **" + $projectInfo.name + " contains no test cases set as publishable. Testing skipped.**`n"	
-            }
-          }
-          else {
-            Write-Host $projectInfo.name " contains no test cases. Testing skipped."
-            $testResults += "`n- :warning: **" + $projectInfo.name + " contains no test cases. Testing skipped.**`n"	
-          }
-        }
+              testResultsTable="| Test case | Result |\n| :-- | :-- |"
+              while IFS= read -r testCase; do
+                testName=$(echo "$testCase" | jq -r '.Name')
+                testStatus=$(echo "$testCase" | jq -r '.Status')
+                testResultsTable+="\n| $testName | $(if [ "$testStatus" == "Passed" ]; then echo ":white_check_mark: Passed"; else echo ":x: Failed"; fi) |"
+              done < <(echo "$testCaseExecutions" | jq -c '.[]')
 
-        # Set output values
-        Write-Output "testExecutionLinks=$($testExecutionURLs)" >> $Env:GITHUB_OUTPUT
-        
-        echo 'testResults<<EOF' >> $Env:GITHUB_OUTPUT
-        echo $testResults.Trim() >> $Env:GITHUB_OUTPUT
-        echo EOF >> $Env:GITHUB_OUTPUT
+              testResults+="\n### [Test results for $(echo "$testResultData" | jq -r '.TestSetExecutions[0].Name')]($testSetExecutionLink)\n$testResultsTable"
 
-        # Create text file with note on tests not existing.
-        if($repositoryContainsTests -eq 0){
-          "No publishable UiPath test cases were found in this repository. Testing has been skipped. " | Out-File $testResultsFolder\"test.txt"
-          Write-Output "containsPublishableTestCases=false" >> $Env:GITHUB_OUTPUT        
-        }
-        else {
-          Write-Output "containsPublishableTestCases=true" >> $Env:GITHUB_OUTPUT
-        }
+              if [ -z "$testExecutionURLs" ]; then
+                testExecutionURLs="$testSetExecutionLink"
+              else
+                testExecutionURLs+=", $testSetExecutionLink"
+              fi
 
-        echo $testResults >> $Env:GITHUB_STEP_SUMMARY
+              if [ $? -ne 0 ]; then
+                testsFailed=1
+              fi
+            else
+              echo "$(echo "$projectInfo" | jq -r '.name') contains no test cases set as publishable. Testing skipped."
+              testResults+="\n- :warning: **$(echo "$projectInfo" | jq -r '.name') contains no test cases set as publishable. Testing skipped.**\n"
+            fi
+          else
+            echo "$(echo "$projectInfo" | jq -r '.name') contains no test cases. Testing skipped."
+            testResults+="\n- :warning: **$(echo "$projectInfo" | jq -r '.name') contains no test cases. Testing skipped.**\n"
+          fi
+        done
 
-        if($testsFailed -ne 0)
-        {
-          throw "Tests failed"
-        }
+        echo "testExecutionLinks=$testExecutionURLs" >> $GITHUB_OUTPUT
+        echo -e "testResults<<EOF\n$testResults\nEOF" >> $GITHUB_OUTPUT
+
+        if [ "$repositoryContainsTests" -eq 0 ]; then
+          echo "No publishable UiPath test cases were found in this repository. Testing has been skipped." > "$testResultsFolder/test.txt"
+          echo "containsPublishableTestCases=false" >> $GITHUB_OUTPUT
+        else
+          echo "containsPublishableTestCases=true" >> $GITHUB_OUTPUT
+        fi
+
+        echo -e "$testResults" >> $GITHUB_STEP_SUMMARY
+
+        if [ "$testsFailed" -ne 0 ]; then
+          echo "Tests failed"
+          exit 1
+        fi
 
     - id: print_outputs
       name: Print outputs
       if: always()
-      shell: pwsh
-      run: | 
+      shell: bash
+      run: |
         echo "${{ steps.run_tests.outputs.testExecutionLinks }}"
         echo "${{ steps.run_tests.outputs.testResults }}"
