@@ -160,10 +160,9 @@ runs:
         testResultsFolder="${{ steps.run_tests.outputs.testResultsFolder }}"
         testExecutionBaseURL="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
 
-        find "$testResultsFolder" -type f -name "*.json" | while IFS= read -r testResultFilePath; do
-          echo "Test result file: $testResultFilePath"
-
-          # Read data from test results file
+        # Loop through all JSON files in the test results folder
+        while IFS= read -r testResultFilePath; do
+          echo "Processing test result file: $testResultFilePath"
           testResultData=$(cat "$testResultFilePath" | jq '.')
           testCaseExecutions=$(echo "$testResultData" | jq -c '.TestSetExecutions[] | .TestCaseExecutions')
           folderId="${{ steps.get_folder_id.outputs.folderId }}"
@@ -171,23 +170,21 @@ runs:
 
           echo "Test execution can be viewed in Orchestrator by clicking this link: $testSetExecutionLink"
 
-          # Add test execution link to the list in output
-          if [ -z "$testExecutionURLs" ]; then
-            testExecutionURLs="$testSetExecutionLink"
-          else
-            testExecutionURLs+=", $testSetExecutionLink"
-          fi
-
-          # Build test results table for output
           testResultsTable="| Test case | Result |\n| :-- | :-- |"
           while IFS= read -r testCase; do
             testName=$(echo "$testCase" | jq -r '.Name')
             testStatus=$(echo "$testCase" | jq -r '.Status')
             testResultsTable+="\n| $testName | $(if [ "$testStatus" == "Passed" ]; then echo ":white_check_mark: Passed"; else echo ":x: Failed"; fi) |"
-          done < <(echo "$testCaseExecutions" | jq -c '.[]')
+          done <<< $(echo "$testCaseExecutions" | jq -c '.[]')
+
           testResults+="\n### [Test results for $(echo "$testResultData" | jq -r '.TestSetExecutions[0].Name')]($testSetExecutionLink)\n$testResultsTable"
 
-        done
+          if [ -z "$testExecutionURLs" ]; then
+            testExecutionURLs="$testSetExecutionLink"
+          else
+            testExecutionURLs+=", $testSetExecutionLink"
+          fi
+        done < <(find "$testResultsFolder" -type f -name "*.json")
 
         echo "testExecutionLinks=$testExecutionURLs" >> $GITHUB_OUTPUT
         echo -e "testResults<<EOF\n$testResults\nEOF" >> $GITHUB_OUTPUT
