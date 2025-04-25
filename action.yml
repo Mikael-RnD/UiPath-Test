@@ -159,13 +159,13 @@ runs:
         testExecutionUrls=""
         testResultsFolder="${{ steps.run_tests.outputs.testResultsFolder }}"
         testExecutionBaseURL="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
+        folderId="${{ steps.get_folder_id.outputs.folderId }}"  
 
         # Loop through all JSON files in the test results folder
         while IFS= read -r testResultFilePath; do
           echo "Processing test result file: $testResultFilePath"
           testResultData=$(cat "$testResultFilePath" | jq '.')
           testCaseExecutions=$(echo "$testResultData" | jq -c '.TestSetExecutions[] | .TestCaseExecutions')
-          folderId="${{ steps.get_folder_id.outputs.folderId }}"
           testSetExecutionLink="$testExecutionBaseURL$(echo "$testResultData" | jq -r '.TestSetExecutions[0].Id')?fid=$folderId"
 
           echo "Test execution can be viewed in Orchestrator by clicking this link: $testSetExecutionLink"
