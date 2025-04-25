@@ -157,8 +157,9 @@ runs:
       run: |
         testResults="${{ steps.run_tests.outputs.testResults }}"
         testExecutionUrls=""
+        testResultsFolder="${{ steps.run_tests.outputs.testResultsFolder }}"
 
-        while IFS= read -r testResultFile; do
+        find "$testResultsFolder" -type f -name "*.json" | while IFS= read -r testResultFilePath; do
           echo "Test result file: $testResultFile"
 
           # Read data from test results file
@@ -185,7 +186,7 @@ runs:
           done < <(echo "$testCaseExecutions" | jq -c '.[]')
           testResults+="\n### [Test results for $(echo "$testResultData" | jq -r '.TestSetExecutions[0].Name')]($testSetExecutionLink)\n$testResultsTable"
 
-        done <<< "${{ steps.run_tests.outputs.testResultsFolder }}"
+        done
 
         echo "testExecutionLinks=$testExecutionURLs" >> $GITHUB_OUTPUT
         echo -e "testResults<<EOF\n$testResults\nEOF" >> $GITHUB_OUTPUT
