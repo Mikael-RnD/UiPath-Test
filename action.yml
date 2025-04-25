@@ -158,9 +158,10 @@ runs:
         testResults="${{ steps.run_tests.outputs.testResults }}"
         testExecutionUrls=""
         testResultsFolder="${{ steps.run_tests.outputs.testResultsFolder }}"
+        testExecutionBaseURL="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
 
         find "$testResultsFolder" -type f -name "*.json" | while IFS= read -r testResultFilePath; do
-          echo "Test result file: $testResultFile"
+          echo "Test result file: $testResultFilePath"
 
           # Read data from test results file
           testResultData=$(cat "$testResultFilePath" | jq '.')
