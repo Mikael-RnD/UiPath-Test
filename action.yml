@@ -30,10 +30,10 @@ inputs:
 outputs:
   testExecutionLinks:
     description: 'Outputs a comma-separated list of Orchestrator links for viewing test results'
-    value: ${{ steps.run_tests.outputs.testExecutionLinks }}
+    value: ${{ steps.parse_test_results.outputs.testExecutionLinks }}
   testResults:
     description: 'Markdown formatted table listing the tests that have been run and whether they passed or failed'
-    value: ${{ steps.run_tests.outputs.testResults }}
+    value: ${{ steps.parse_test_results.outputs.testResults }}
   containsPublishableTestCases:
     description: 'Boolean value indicating whether any test cases set as publishable were found in the repository'
     value: ${{ steps.run_tests.outputs.containsPublishableTestCases }}
@@ -84,6 +84,7 @@ runs:
       run: |
         testsFailed=0
         testResultsFolder="${{ github.workspace }}/test-results"
+        echo "testResultsFolder=$testResultsFolder" >> $GITHUB_OUTPUT
         mkdir -p "$testResultsFolder"
         testResults=""
         testExecutionBaseURL="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
@@ -107,6 +108,7 @@ runs:
             publishableTests=$(echo "$fileInfoCollection" | jq '[.[] | select(.editingStatus == "Publishable")] | length')
             if [ "$publishableTests" -gt 0 ]; then
               repositoryContainsTests=1
+              echo "containsPublishableTestCases=true" >> $GITHUB_OUTPUT
               testResultFilePath="$testResultsFolder/$(echo "$projectInfo" | jq -r '.name')-testresults.json"
 
               echo "Running tests for project $(echo "$projectInfo" | jq -r '.name')"
@@ -121,28 +123,6 @@ runs:
                 --result_path "$testResultFilePath" \
                 --language en-US
 
-              testResultData=$(cat "$testResultFilePath" | jq '.')
-              testCaseExecutions=$(echo "$testResultData" | jq -c '.TestSetExecutions[] | .TestCaseExecutions')
-              folderId="${{ steps.get_folder_id.outputs.folderId }}"
-              testSetExecutionLink="$testExecutionBaseURL$(echo "$testResultData" | jq -r '.TestSetExecutions[0].Id')?fid=$folderId"
-
-              echo "Test execution can be viewed in Orchestrator by clicking this link: $testSetExecutionLink"
-
-              testResultsTable="| Test case | Result |\n| :-- | :-- |"
-              while IFS= read -r testCase; do
-                testName=$(echo "$testCase" | jq -r '.Name')
-                testStatus=$(echo "$testCase" | jq -r '.Status')
-                testResultsTable+="\n| $testName | $(if [ "$testStatus" == "Passed" ]; then echo ":white_check_mark: Passed"; else echo ":x: Failed"; fi) |"
-              done < <(echo "$testCaseExecutions" | jq -c '.[]')
-
-              testResults+="\n### [Test results for $(echo "$testResultData" | jq -r '.TestSetExecutions[0].Name')]($testSetExecutionLink)\n$testResultsTable"
-
-              if [ -z "$testExecutionURLs" ]; then
-                testExecutionURLs="$testSetExecutionLink"
-              else
-                testExecutionURLs+=", $testSetExecutionLink"
-              fi
-
               if [ $? -ne 0 ]; then
                 testsFailed=1
               fi
@@ -156,27 +136,61 @@ runs:
           fi
         done <<< "$projectJsonFiles"
 
-        echo "testExecutionLinks=$testExecutionURLs" >> $GITHUB_OUTPUT
-        echo -e "testResults<<EOF\n$testResults\nEOF" >> $GITHUB_OUTPUT
 
+        # Output that no tests were found
         if [ "$repositoryContainsTests" -eq 0 ]; then
-          echo "No publishable UiPath test cases were found in this repository. Testing has been skipped." > "$testResultsFolder/test.txt"
+          echo "No publishable UiPath test cases were found in this repository. Testing has been skipped."
           echo "containsPublishableTestCases=false" >> $GITHUB_OUTPUT
-        else
-          echo "containsPublishableTestCases=true" >> $GITHUB_OUTPUT
         fi
 
-        echo -e "$testResults" >> $GITHUB_STEP_SUMMARY
+        echo -e "testResults<<EOF\n$testResults\nEOF" >> $GITHUB_OUTPUT
 
         if [ "$testsFailed" -ne 0 ]; then
           echo "Tests failed"
           exit 1
         fi
 
-    - id: print_outputs
-      name: Print outputs
+    - id: parse_test_results
+      name: Parse test results
       if: always()
       shell: bash
       run: |
+        testResults="${{ steps.run_tests.outputs.testResults }}"
+        testExecutionUrls=""
+
+        while IFS= read -r testResultFile; do
+          echo "Test result file: $testResultFile"
+
+          # Read data from test results file
+          testResultData=$(cat "$testResultFilePath" | jq '.')
+          testCaseExecutions=$(echo "$testResultData" | jq -c '.TestSetExecutions[] | .TestCaseExecutions')
+          folderId="${{ steps.get_folder_id.outputs.folderId }}"
+          testSetExecutionLink="$testExecutionBaseURL$(echo "$testResultData" | jq -r '.TestSetExecutions[0].Id')?fid=$folderId"
+
+          echo "Test execution can be viewed in Orchestrator by clicking this link: $testSetExecutionLink"
+
+          # Add test execution link to the list in output
+          if [ -z "$testExecutionURLs" ]; then
+            testExecutionURLs="$testSetExecutionLink"
+          else
+            testExecutionURLs+=", $testSetExecutionLink"
+          fi
+
+          # Build test results table for output
+          testResultsTable="| Test case | Result |\n| :-- | :-- |"
+          while IFS= read -r testCase; do
+            testName=$(echo "$testCase" | jq -r '.Name')
+            testStatus=$(echo "$testCase" | jq -r '.Status')
+            testResultsTable+="\n| $testName | $(if [ "$testStatus" == "Passed" ]; then echo ":white_check_mark: Passed"; else echo ":x: Failed"; fi) |"
+          done < <(echo "$testCaseExecutions" | jq -c '.[]')
+          testResults+="\n### [Test results for $(echo "$testResultData" | jq -r '.TestSetExecutions[0].Name')]($testSetExecutionLink)\n$testResultsTable"
+
+        done <<< "${{ steps.run_tests.outputs.testResultsFolder }}"
+
+        echo "testExecutionLinks=$testExecutionURLs" >> $GITHUB_OUTPUT
+        echo -e "testResults<<EOF\n$testResults\nEOF" >> $GITHUB_OUTPUT
+        
+        echo -e "$testResults" >> $GITHUB_STEP_SUMMARY
+
         echo "${{ steps.run_tests.outputs.testExecutionLinks }}"
         echo "${{ steps.run_tests.outputs.testResults }}"
