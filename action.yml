@@ -206,5 +206,5 @@ runs:
         
         echo -e "$testResults" >> $GITHUB_STEP_SUMMARY
 
-        echo "${{ steps.run_tests.outputs.testExecutionLinks }}"
-        echo "${{ steps.run_tests.outputs.testResults }}"
+        echo "$testExecutionLinks"
+        echo "$testResults"
