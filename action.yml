@@ -71,7 +71,7 @@ runs:
         echo $encodedParameters
 
         folderRequestURL="$orchestratorURL/${{ inputs.organizationId }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$encodedParameters"
-        folderRequestHeaders=("Authorization: Bearer ${{ steps.get-orchestrator-token.outputs.accessToken }}")
+        folderRequestHeaders=("Authorization: Bearer $accessToken")
         
         # Get folder ID
         folderRequestResponse=$(curl -s -X GET "$folderRequestURL" -H "${folderRequestHeaders[@]}")
