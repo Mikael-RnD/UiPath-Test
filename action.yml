@@ -58,8 +58,10 @@ runs:
         body="grant_type=client_credentials&client_id=$clientId&client_secret=$clientSecret&scope=$scope"
         authResponse=$(curl -s -X POST "$orchestratorURL/identity_/connect/token" -H "${headers[@]}" -d "$body")
         accessToken=$(echo "$authResponse" | jq -r '.access_token')
+        echo "::add-mask::$accessToken"
+        echo Authentication response: "$authResponse"
 
-        if [ "$accessToken" == "null" ]; then
+        if [ -z "$accessToken" ] || [ "$accessToken" == "null" ]; then
           echo "Error: Failed to obtain access token. Response: $authResponse"
           exit 1
         fi
@@ -70,12 +72,25 @@ runs:
         encodedParameters=$(jq -rn --arg params "$parameters" '$params | @uri')
         echo $encodedParameters
 
-        folderRequestURL="$orchestratorURL/${{ inputs.organizationId }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$encodedParameters"
-        folderRequestHeaders=("Authorization: Bearer ${{ steps.get-orchestrator-token.outputs.accessToken }}")
+        folderRequestURL="$orchestratorURL/${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$encodedParameters"
+        echo "Requesting folder ID from URL: $folderRequestURL"
+        folderRequestHeaders=("Authorization: Bearer $accessToken")
         
-        # Get folder ID
-        folderRequestResponse=$(curl -s -X GET "$folderRequestURL" -H "${folderRequestHeaders[@]}")
-        folderId=$(echo "$folderRequestResponse" | jq -r '.value[0].Id')
+        # Make the request and capture the response and status code
+        httpStatus=$(curl -s -o response_body.txt -w "%{http_code}" -X GET "$folderRequestURL" -H "${folderRequestHeaders[@]}")
+        responseBody=$(cat response_body.txt)
+
+        # Log the response and status code
+        echo "HTTP Status: $httpStatus"
+        echo "Response Body: $responseBody"
+
+        # Check if the status code is not 200
+        if [ "$httpStatus" -ne 200 ]; then
+          echo "Warning: Request failed with status code $httpStatus. Response: $responseBody"
+          exit 1
+        fi
+
+        folderId=$(echo "$responseBody" | jq -r '.value[0].Id')
         echo "folderId=$folderId" >> $GITHUB_OUTPUT
 
     - id: run_tests
@@ -191,5 +206,5 @@ runs:
         
         echo -e "$testResults" >> $GITHUB_STEP_SUMMARY
 
-        echo "${{ steps.run_tests.outputs.testExecutionLinks }}"
-        echo "${{ steps.run_tests.outputs.testResults }}"
+        echo "$testExecutionLinks"
+        echo "$testResults"
