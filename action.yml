@@ -72,7 +72,7 @@ runs:
         encodedParameters=$(jq -rn --arg params "$parameters" '$params | @uri')
         echo $encodedParameters
 
-        folderRequestURL="$orchestratorURL/${{ inputs.organizationId }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$encodedParameters"
+        folderRequestURL="$orchestratorURL/${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$encodedParameters"
         echo "Requesting folder ID from URL: $folderRequestURL"
         folderRequestHeaders=("Authorization: Bearer $accessToken")
         
