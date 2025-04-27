@@ -75,6 +75,7 @@ runs:
         
         # Get folder ID
         folderRequestResponse=$(curl -s -X GET "$folderRequestURL" -H "${folderRequestHeaders[@]}")
+        echo "$folderRequestResponse"
         folderId=$(echo "$folderRequestResponse" | jq -r '.value[0].Id')
         echo "folderId=$folderId" >> $GITHUB_OUTPUT
 
