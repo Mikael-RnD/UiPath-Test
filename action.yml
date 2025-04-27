@@ -58,6 +58,8 @@ runs:
         body="grant_type=client_credentials&client_id=$clientId&client_secret=$clientSecret&scope=$scope"
         authResponse=$(curl -s -X POST "$orchestratorURL/identity_/connect/token" -H "${headers[@]}" -d "$body")
         accessToken=$(echo "$authResponse" | jq -r '.access_token')
+        echo "::add-mask::$accessToken"
+        echo Authentication response: "$authResponse"
 
         if [ -z "$accessToken" ] || [ "$accessToken" == "null" ]; then
           echo "Error: Failed to obtain access token. Response: $authResponse"
