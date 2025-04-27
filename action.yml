@@ -74,20 +74,22 @@ runs:
         echo "Requesting folder ID from URL: $folderRequestURL"
         folderRequestHeaders=("Authorization: Bearer $accessToken")
         
-        # Make the request and capture both the response and the HTTP status code
-        folderRequestResponse=$(curl -s -w "%{http_code}" -o response_body.txt -X GET "$folderRequestURL" -H "${folderRequestHeaders[@]}")
-        httpStatus=$(tail -c 3 <<< "$folderRequestResponse")
+        # Make the request and capture the response and status code
+        httpStatus=$(curl -s -o response_body.txt -w "%{http_code}" -X GET "$folderRequestURL" -H "${folderRequestHeaders[@]}")
         responseBody=$(cat response_body.txt)
-        echo "GET Folder response: $responseBody"
+
+        # Log the response and status code
+        echo "HTTP Status: $httpStatus"
+        echo "Response Body: $responseBody"
 
         # Check if the status code is not 200
         if [ "$httpStatus" -ne 200 ]; then
-          echo "Warning: GET folder request failed with status code $httpStatus. Response: $responseBody"
-        else
-          folderId=$(echo "$responseBody" | jq -r '.value[0].Id')
-          echo "folderId=$folderId" >> $GITHUB_OUTPUT
+          echo "Warning: Request failed with status code $httpStatus. Response: $responseBody"
+          exit 1
         fi
-        
+
+        folderId=$(echo "$responseBody" | jq -r '.value[0].Id')
+        echo "folderId=$folderId" >> $GITHUB_OUTPUT
 
     - id: run_tests
       name: Test
