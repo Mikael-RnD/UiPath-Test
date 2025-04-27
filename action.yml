@@ -59,7 +59,7 @@ runs:
         authResponse=$(curl -s -X POST "$orchestratorURL/identity_/connect/token" -H "${headers[@]}" -d "$body")
         accessToken=$(echo "$authResponse" | jq -r '.access_token')
 
-        if [ "$accessToken" == "null" ]; then
+        if [ -z "$accessToken" ] || [ "$accessToken" == "null" ]; then
           echo "Error: Failed to obtain access token. Response: $authResponse"
           exit 1
         fi
@@ -71,13 +71,23 @@ runs:
         echo $encodedParameters
 
         folderRequestURL="$orchestratorURL/${{ inputs.organizationId }}/${{ inputs.orchestratorTenant }}/orchestrator_/odata/folders?$encodedParameters"
+        echo "Requesting folder ID from URL: $folderRequestURL"
         folderRequestHeaders=("Authorization: Bearer $accessToken")
         
-        # Get folder ID
-        folderRequestResponse=$(curl -s -X GET "$folderRequestURL" -H "${folderRequestHeaders[@]}")
-        echo "$folderRequestResponse"
-        folderId=$(echo "$folderRequestResponse" | jq -r '.value[0].Id')
-        echo "folderId=$folderId" >> $GITHUB_OUTPUT
+        # Make the request and capture both the response and the HTTP status code
+        folderRequestResponse=$(curl -s -w "%{http_code}" -o response_body.txt -X GET "$folderRequestURL" -H "${folderRequestHeaders[@]}")
+        httpStatus=$(tail -c 3 <<< "$folderRequestResponse")
+        responseBody=$(cat response_body.txt)
+        echo "GET Folder response: $responseBody"
+
+        # Check if the status code is not 200
+        if [ "$httpStatus" -ne 200 ]; then
+          echo "Warning: GET folder request failed with status code $httpStatus. Response: $responseBody"
+        else
+          folderId=$(echo "$responseBody" | jq -r '.value[0].Id')
+          echo "folderId=$folderId" >> $GITHUB_OUTPUT
+        fi
+        
 
     - id: run_tests
       name: Test
