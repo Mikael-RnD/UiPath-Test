@@ -37,6 +37,11 @@ outputs:
   containsPublishableTestCases:
     description: 'Boolean value indicating whether any test cases set as publishable were found in the repository'
     value: ${{ steps.run_tests.outputs.containsPublishableTestCases }}
+  testResultsFolder:
+    description: |
+      Path to the folder where the test result JSON files created by the UiPath CLI are stored. 
+      Can be used for further processing, such as uploading to Artifacts or sending to another action.
+    value: ${{ steps.run_tests.outputs.testResultsFolder }}
 
 runs:
   using: "composite"
