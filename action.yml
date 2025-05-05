@@ -121,17 +121,19 @@ runs:
 
         while IFS= read -r projectFile; do
           projectInfo=$(cat "$projectFile" | jq '.')
+          projectName=$(echo "$projectInfo" | jq -r '.name')
           targetFramework=$(echo "$projectInfo" | jq -r '.targetFramework')
           fileInfoCollection=$(echo "$projectInfo" | jq -r '.designOptions.fileInfoCollection')
-
+          
+          echo "::group::uipcli output for testing project $projectName"
           if [ "$(echo "$fileInfoCollection" | jq length)" -gt 0 ]; then
             publishableTests=$(echo "$fileInfoCollection" | jq '[.[] | select(.editingStatus == "Publishable")] | length')
             if [ "$publishableTests" -gt 0 ]; then
               repositoryContainsTests=1
               echo "containsPublishableTestCases=true" >> $GITHUB_OUTPUT
-              testResultFilePath="$testResultsFolder/$(echo "$projectInfo" | jq -r '.name')-testresults.json"
+              testResultFilePath="$testResultsFolder/$(echo "$projectInfo-testresults.json"
 
-              echo "Running tests for project $(echo "$projectInfo" | jq -r '.name')"
+              echo "Running tests for project $projectName"
               uipcli test run "${{ inputs.orchestratorUrl }}" "${{ inputs.orchestratorTenant }}" \
                 --project-path "$projectFile" \
                 --accountForApp "${{ inputs.orchestratorLogicalName }}" \
@@ -147,13 +149,14 @@ runs:
                 testsFailed=1
               fi
             else
-              echo "$(echo "$projectInfo" | jq -r '.name') contains no test cases set as publishable. Testing skipped."
-              testResults+="\n- :warning: **$(echo "$projectInfo" | jq -r '.name') contains no test cases set as publishable. Testing skipped.**\n"
+              echo "$projectName contains no test cases set as publishable. Testing skipped."
+              testResults+="\n- :warning: **$projectName contains no test cases set as publishable. Testing skipped.**\n"
             fi
           else
-            echo "$(echo "$projectInfo" | jq -r '.name') contains no test cases. Testing skipped."
-            testResults+="\n- :warning: **$(echo "$projectInfo" | jq -r '.name') contains no test cases. Testing skipped.**\n"
+            echo "$(echo "$projectName contains no test cases. Testing skipped."
+            testResults+="\n- :warning: **$projectName contains no test cases. Testing skipped.**\n"
           fi
+          echo "::endgroup::"
         done <<< "$projectJsonFiles"
 
 
