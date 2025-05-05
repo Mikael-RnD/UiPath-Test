@@ -125,7 +125,7 @@ runs:
           targetFramework=$(echo "$projectInfo" | jq -r '.targetFramework')
           fileInfoCollection=$(echo "$projectInfo" | jq -r '.designOptions.fileInfoCollection')
           
-          echo "::group::uipcli output for testing project $projectName"
+          echo "::group::uipcli output for testing project ${projectName}"
           if [ "$(echo "$fileInfoCollection" | jq length)" -gt 0 ]; then
             publishableTests=$(echo "$fileInfoCollection" | jq '[.[] | select(.editingStatus == "Publishable")] | length')
             if [ "$publishableTests" -gt 0 ]; then
@@ -149,12 +149,12 @@ runs:
                 testsFailed=1
               fi
             else
-              echo "$projectName contains no test cases set as publishable. Testing skipped."
-              testResults+="\n- :warning: **$projectName contains no test cases set as publishable. Testing skipped.**\n"
+              echo "${projectName} contains no test cases set as publishable. Testing skipped."
+              testResults+="\n- :warning: **${projectName} contains no test cases set as publishable. Testing skipped.**\n"
             fi
           else
-            echo "$(echo "$projectName contains no test cases. Testing skipped."
-            testResults+="\n- :warning: **$projectName contains no test cases. Testing skipped.**\n"
+            echo "$(echo "${projectName} contains no test cases. Testing skipped."
+            testResults+="\n- :warning: **${projectName} contains no test cases. Testing skipped.**\n"
           fi
           echo "::endgroup::"
         done <<< "$projectJsonFiles"
