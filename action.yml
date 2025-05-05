@@ -131,7 +131,7 @@ runs:
             if [ "$publishableTests" -gt 0 ]; then
               repositoryContainsTests=1
               echo "containsPublishableTestCases=true" >> $GITHUB_OUTPUT
-              testResultFilePath="$testResultsFolder/$(echo "$projectInfo-testresults.json"
+              testResultFilePath="$testResultsFolder/$projectName-testresults.json"
 
               echo "Running tests for project $projectName"
               uipcli test run "${{ inputs.orchestratorUrl }}" "${{ inputs.orchestratorTenant }}" \
