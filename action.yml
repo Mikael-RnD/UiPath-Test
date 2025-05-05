@@ -126,6 +126,7 @@ runs:
           fileInfoCollection=$(echo "$projectInfo" | jq -r '.designOptions.fileInfoCollection')
           
           echo "::group::uipcli output for testing project ${projectName}"
+          
           if [ "$(echo "$fileInfoCollection" | jq length)" -gt 0 ]; then
             publishableTests=$(echo "$fileInfoCollection" | jq '[.[] | select(.editingStatus == "Publishable")] | length')
             if [ "$publishableTests" -gt 0 ]; then
@@ -153,7 +154,7 @@ runs:
               testResults+="\n- :warning: **${projectName} contains no test cases set as publishable. Testing skipped.**\n"
             fi
           else
-            echo "$(echo "${projectName} contains no test cases. Testing skipped."
+            echo "${projectName} contains no test cases. Testing skipped."
             testResults+="\n- :warning: **${projectName} contains no test cases. Testing skipped.**\n"
           fi
           echo "::endgroup::"
