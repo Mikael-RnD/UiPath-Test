@@ -27,6 +27,9 @@ inputs:
   orchestratorLogicalName:
     description: 'Logical name for Orchestrator organization'
     required: true
+  retryCount:
+    description: 'Number of retries for failed test cases (by default, no retry is set).'
+    required: false
 outputs:
   testExecutionLinks:
     description: 'Outputs a comma-separated list of Orchestrator links for viewing test results'
@@ -98,6 +101,17 @@ runs:
         folderId=$(echo "$responseBody" | jq -r '.value[0].Id')
         echo "folderId=$folderId" >> $GITHUB_OUTPUT
 
+    - id: set_retry_count
+      name: Set retry count
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.retryCount }}" ]; then
+          echo "No retry count provided. Defaulting to 0."
+        else
+          echo "retryCount=--retryCount ${{ inputs.retryCount }}" >> $GITHUB_OUTPUT
+          echo "Retry count set to ${{ inputs.retryCount }}"
+        fi
+
     - id: run_tests
       name: Test
       shell: bash
@@ -144,7 +158,8 @@ runs:
                 --organizationUnit "${{ inputs.orchestratorFolder }}" \
                 --out uipath \
                 --result_path "$testResultFilePath" \
-                --language en-US
+                --language en-US \
+                ${{ steps.set_retry_count.outputs.retryCount }}
 
               if [ $? -ne 0 ]; then
                 testsFailed=1

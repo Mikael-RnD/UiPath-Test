@@ -50,6 +50,7 @@ The example below illustrates how the action can be used for a repository of mul
           orchestratorApplicationSecret: ${{ secrets.ORCHESTRATOR_APP_SECRET }}
           orchestratorApplicationScope: "OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSets OR.TestSetExecutions OR.TestSetSchedules OR.Users.Read"
           orchestratorLogicalName: myorg
+          retryCount: 1
 
 ```
 
@@ -65,6 +66,7 @@ The example below illustrates how the action can be used for a repository of mul
 |**orchestratorApplicationId**|Application ID for the CLI to authenticate with UiPath Orchestrator|True||${{ secrets.ORCHESTRATOR_APP_ID }}|
 |**orchestratorApplicationSecret**|Application Secret for the CLI to authenticate with UiPath Orchestrator|True||${{ secrets.ORCHESTRATOR_APP_SECRET }}|
 |**orchestratorApplicationScope**|External application scope|False|"OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSets OR.TestSetExecutions OR.TestSetSchedules OR.Users.Read"||
+|**retryCount**|Number of retries for failed test cases (by default, no retry is set).|False||1|
 
 ## Outputs
 
