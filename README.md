@@ -1,6 +1,6 @@
 # UiPath-Test
 
-GitHub Action for running all publishable test cases in UiPath projects. Detailed test results are provided in json format from this action. They can also be found by navigating to the Testing tab in UiPath Orchestrator. Built as a wrapper around the [UiPath CLI task for running tests from a UiPath project.](https://docs.uipath.com/automation-ops/automation-cloud/latest/user-guide/executing-tasks-cli#testing-a-package-or-running-a-test-set)
+GitHub Action for running all publishable test cases in UiPath projects. Detailed test results are provided in json format from this action. They can also be found by navigating to the Testing tab in UiPath Orchestrator. Built as a wrapper around the [UiPath CLI task for running tests from a UiPath project.](https://docs.uipath.com/cicd-integrations/standalone/2024.10/user-guide/testing-a-packagerunning-a-test-set)
 
 The action triggers test cases to be run by robots through UiPath Orchestrator and writes the test result outputs to the [GitHub Actions job summary](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary). See the setup section below on requirements for running test cases.
 
@@ -10,13 +10,13 @@ This action requires the following things to be set up in UiPath Orchestrator:
 
 - UiPath CLI installed on GitHub Actions Runner. This can be done by running the [setup-uipath action](https://github.com/Mikael-RnD/setup-uipath) before this action
 - Test robots connected to the target folder/tenant in UiPath Orchestrator
-- [An external application created in Orchestrator](https://docs.uipath.com/automation-cloud/automation-cloud/latest/admin-guide/managing-external-applications) with the access scopes specified in the [UiPath CLI documentation](https://docs.uipath.com/automation-ops/automation-cloud/latest/user-guide/executing-tasks-cli#api-access-application-scopes). With the credentials passed to this actions input from GitHub Secrets (or other safe credential stores)
+- [An external application created in Orchestrator](https://docs.uipath.com/automation-cloud/automation-cloud/latest/admin-guide/managing-external-applications) with the access scopes specified in the [UiPath CLI documentation](https://docs.uipath.com/cicd-integrations/standalone/2024.10/user-guide/executing-uipath-cli-tasks#api-access-application-scopes). With the credentials passed to this actions input from GitHub Secrets (or other safe credential stores)
 
 ## Example usage
 
 ### Minimum required inputs
 
-Using the minimum required inputs to this action assumes that the action is intended to run tests for all projects in the repository, targeting a tenant/organization within UiPath Automation Cloud, with the credentials for an external application that has been configured with the default application scopes noted [here.](https://docs.uipath.com/automation-ops/automation-cloud/latest/user-guide/executing-tasks-cli#api-access-application-scopes)
+Using the minimum required inputs to this action assumes that the action is intended to run tests for all projects in the repository, targeting a tenant/organization within UiPath Automation Cloud, with the credentials for an external application that has been configured with the default application scopes noted [here.](https://docs.uipath.com/cicd-integrations/standalone/2024.10/user-guide/executing-uipath-cli-tasks#api-access-application-scopes)
 
 ```yml
       # Run all publishable unit tests from UiPath projects in this repository, targeting an organization and tenant in UiPath Automation Cloud
@@ -50,6 +50,7 @@ The example below illustrates how the action can be used for a repository of mul
           orchestratorApplicationSecret: ${{ secrets.ORCHESTRATOR_APP_SECRET }}
           orchestratorApplicationScope: "OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSets OR.TestSetExecutions OR.TestSetSchedules OR.Users.Read"
           orchestratorLogicalName: myorg
+          retryCount: 1
 
 ```
 
@@ -65,6 +66,7 @@ The example below illustrates how the action can be used for a repository of mul
 |**orchestratorApplicationId**|Application ID for the CLI to authenticate with UiPath Orchestrator|True||${{ secrets.ORCHESTRATOR_APP_ID }}|
 |**orchestratorApplicationSecret**|Application Secret for the CLI to authenticate with UiPath Orchestrator|True||${{ secrets.ORCHESTRATOR_APP_SECRET }}|
 |**orchestratorApplicationScope**|External application scope|False|"OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSets OR.TestSetExecutions OR.TestSetSchedules OR.Users.Read"||
+|**retryCount**|Number of retries for failed test cases (by default, no retry is set).|False||1|
 
 ## Outputs
 
