@@ -59,12 +59,12 @@ The example below illustrates how the action can be used for a repository of mul
 |Name|Description|Required|Default value|Example value|
 |:--|:--|:--|:--|:--|
 |**projectFilePaths**|Multiline input containing a list of projects to perform the operations on. If left empty, the action scans for any project.json files in the repository|False||TheProject/project.json|
-|**orchestratorUrl**|Base URL to Orchestrator instance|False|<https://cloud.uipath.com/>|<https://mycompany.orchestrator.com/>|
+|**orchestratorUrl**|Base URL to Orchestrator instance|False|https://cloud.uipath.com/|https://mycompany.orchestrator.com/|
 |**orchestratorTenant**|Name of the Orchestrator tenant|True||TestTenant|
 |**orchestratorLogicalName**|Id of the UiPath organization|True||testorg|
 |**orchestratorFolder**|The fully qualified name of the Orchestrator folder where processes are deployed to|True||Finance/SE|
-|**orchestratorApplicationId**|Application ID for the CLI to authenticate with UiPath Orchestrator|True||${{ secrets.ORCHESTRATOR_APP_ID }}|
-|**orchestratorApplicationSecret**|Application Secret for the CLI to authenticate with UiPath Orchestrator|True||${{ secrets.ORCHESTRATOR_APP_SECRET }}|
+|**orchestratorApplicationId**|Application ID for the CLI to authenticate with UiPath Orchestrator|True||`${{ secrets.ORCHESTRATOR_APP_ID }}`|
+|**orchestratorApplicationSecret**|Application Secret for the CLI to authenticate with UiPath Orchestrator|True||`${{ secrets.ORCHESTRATOR_APP_SECRET }}`|
 |**orchestratorApplicationScope**|External application scope|False|"OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSets OR.TestSetExecutions OR.TestSetSchedules OR.Users.Read"||
 |**retryCount**|Number of retries for failed test cases (by default, no retry is set).|False||1|
 
