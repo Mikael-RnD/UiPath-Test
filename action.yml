@@ -159,6 +159,7 @@ runs:
                 --out uipath \
                 --result_path "$testResultFilePath" \
                 --language en-US \
+                --traceLevel "Warning" \
                 ${{ steps.set_retry_count.outputs.retryCount }}
 
               if [ $? -ne 0 ]; then
