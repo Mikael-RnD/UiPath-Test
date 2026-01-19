@@ -30,13 +30,16 @@ inputs:
   retryCount:
     description: 'Number of retries for failed test cases (by default, no retry is set).'
     required: false
+  projectKey:
+    description: 'Project key in Test Manager. (Required if using Test Manager parameters)'
+    required: false
 outputs:
   testExecutionLinks:
     description: 'Outputs a comma-separated list of Orchestrator links for viewing test results'
-    value: ${{ steps.parse_test_results.outputs.testExecutionLinks }}
+    value: ${{ steps.parse_test_results.outputs.testExecutionLinks || steps.parse_test_results_test_manager.outputs.testExecutionLinks }}
   testResults:
     description: 'Markdown formatted table listing the tests that have been run and whether they passed or failed'
-    value: ${{ steps.parse_test_results.outputs.testResults }}
+    value: ${{ steps.parse_test_results.outputs.testResults || steps.parse_test_results_test_manager.outputs.testResults }}
   containsPublishableTestCases:
     description: 'Boolean value indicating whether any test cases set as publishable were found in the repository'
     value: ${{ steps.run_tests.outputs.containsPublishableTestCases }}
@@ -101,16 +104,27 @@ runs:
         folderId=$(echo "$responseBody" | jq -r '.value[0].Id')
         echo "folderId=$folderId" >> $GITHUB_OUTPUT
 
-    - id: set_retry_count
-      name: Set retry count
+    - id: set_additional_parameters
+      name: Set additional parameters
       shell: bash
       run: |
+        retryCountParam=""
+        projectKeyParam=""
         if [ -z "${{ inputs.retryCount }}" ]; then
           echo "No retry count provided. Defaulting to 0."
         else
-          echo "retryCount=--retryCount ${{ inputs.retryCount }}" >> $GITHUB_OUTPUT
+          retryCountParam="--retryCount ${{ inputs.retryCount }}"
           echo "Retry count set to ${{ inputs.retryCount }}"
         fi
+
+        if [ -z "${{ inputs.projectKey }}" ]; then
+          echo "No Test Manager project key provided."
+        else
+          projectKeyParam="--projectKey ${{ inputs.projectKey }}"
+          echo "Project key set to ${{ inputs.projectKey }}"
+        fi
+
+        echo "additionalParameters=$retryCountParam $projectKeyParam" >> $GITHUB_OUTPUT
 
     - id: run_tests
       name: Test
@@ -160,7 +174,7 @@ runs:
                 --result_path "$testResultFilePath" \
                 --language en-US \
                 --traceLevel "Warning" \
-                ${{ steps.set_retry_count.outputs.retryCount }}
+                ${{ steps.set_additional_parameters.outputs.additionalParameters }}
 
               if [ $? -ne 0 ]; then
                 testsFailed=1
@@ -191,8 +205,8 @@ runs:
         fi
 
     - id: parse_test_results
-      name: Parse test results
-      if: always()
+      name: Parse test results (Standard)
+      if: always() && inputs.projectKey == ''
       shell: bash
       run: |
         testResults="${{ steps.run_tests.outputs.testResults }}"
@@ -224,6 +238,57 @@ runs:
           else
             testExecutionURLs+=", $testSetExecutionLink"
           fi
+        done < <(find "$testResultsFolder" -type f -name "*.json")
+
+        echo "testExecutionLinks=$testExecutionURLs" >> $GITHUB_OUTPUT
+        echo -e "testResults<<EOF\n$testResults\nEOF" >> $GITHUB_OUTPUT
+        
+        echo -e "$testResults" >> $GITHUB_STEP_SUMMARY
+
+        echo "$testExecutionLinks"
+        echo "$testResults"
+
+    - id: parse_test_results_test_manager
+      name: Parse test results (Test Manager)
+      if: always() && inputs.projectKey != ''
+      shell: bash
+      run: |
+        testResults="${{ steps.run_tests.outputs.testResults }}"
+        testExecutionUrls=""
+        testResultsFolder="${{ steps.run_tests.outputs.testResultsFolder }}"
+        folderId="${{ steps.get_folder_id.outputs.folderId }}"  
+
+        # Loop through all JSON files in the test results folder
+        while IFS= read -r testResultFilePath; do
+          echo "Processing test result file: $testResultFilePath"
+          testResultData=$(cat "$testResultFilePath" | jq '.')
+          
+          # Loop through each TestManagerTestSetRuns entry
+          while IFS= read -r testSetRun; do
+            testSetRunId=$(echo "$testSetRun" | jq -r '.Id')
+            testSetRunName=$(echo "$testSetRun" | jq -r '.Name')
+            testSetExecutionLink="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/testmanager_/${{ inputs.projectKey }}/testexecutions/$testSetRunId"
+
+            echo "Test execution can be viewed in Test Manager by clicking this link: $testSetExecutionLink"
+
+            testResultsTable="| Test case | Result |\n| :-- | :-- |"
+            # Loop through each TestCaseExecution within this TestManagerTestSetRun
+            while IFS= read -r testCase; do
+              testName=$(echo "$testCase" | jq -r '.Name')
+              testCaseId=$(echo "$testCase" | jq -r '.TestCaseId')
+              testStatus=$(echo "$testCase" | jq -r '.Status')
+              testCaseLink="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/testmanager_/${{ inputs.projectKey }}/testexecution-results/$testSetRunId/$testCaseId"
+              testResultsTable+="\n| [$testName]($testCaseLink) | $(if [ "$testStatus" == "Passed" ]; then echo ":white_check_mark: Passed"; else echo ":x: Failed"; fi) |"
+            done <<< $(echo "$testSetRun" | jq -c '.TestCaseExecutions[]')
+
+            testResults+="\n### [Test results for $testSetRunName]($testSetExecutionLink)\n$testResultsTable"
+
+            if [ -z "$testExecutionURLs" ]; then
+              testExecutionURLs="$testSetExecutionLink"
+            else
+              testExecutionURLs+=", $testSetExecutionLink"
+            fi
+          done <<< $(echo "$testResultData" | jq -c '.TestManagerTestSetRuns[]')
         done < <(find "$testResultsFolder" -type f -name "*.json")
 
         echo "testExecutionLinks=$testExecutionURLs" >> $GITHUB_OUTPUT
