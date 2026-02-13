@@ -97,7 +97,7 @@ runs:
 
         # Check if the status code is not 200
         if [ "$httpStatus" -ne 200 ]; then
-          echo "Warning: Request failed with status code $httpStatus. Response: $responseBody"
+          echo "::error title=Get Folder ID failed::Request failed with status code $httpStatus. Response: $responseBody"
           exit 1
         fi
 
@@ -180,11 +180,11 @@ runs:
                 testsFailed=1
               fi
             else
-              echo "${projectName} contains no test cases set as publishable. Testing skipped."
+              echo "::warning title=${projectName} contains no test cases set as publishable. Testing skipped."
               testResults+="\n- :warning: **${projectName} contains no test cases set as publishable. Testing skipped.**\n"
             fi
           else
-            echo "${projectName} contains no test cases. Testing skipped."
+            echo "::warning title=${projectName} contains no test cases. Testing skipped."
             testResults+="\n- :warning: **${projectName} contains no test cases. Testing skipped.**\n"
           fi
           echo "::endgroup::"
@@ -193,14 +193,14 @@ runs:
 
         # Output that no tests were found
         if [ "$repositoryContainsTests" -eq 0 ]; then
-          echo "No publishable UiPath test cases were found in this repository. Testing has been skipped."
+          echo "::warning title=No publishable UiPath test cases were found in this repository. Testing has been skipped."
           echo "containsPublishableTestCases=false" >> $GITHUB_OUTPUT
         fi
 
         echo -e "testResults<<EOF\n$testResults\nEOF" >> $GITHUB_OUTPUT
 
         if [ "$testsFailed" -ne 0 ]; then
-          echo "Tests failed"
+          echo "::error title=Tests failed"
           exit 1
         fi
 
