@@ -180,11 +180,11 @@ runs:
                 testsFailed=1
               fi
             else
-              echo "::warning title=${projectName} contains no test cases set as publishable. Testing skipped."
+              echo "::warning title=${projectName} contains no test cases set as publishable.:: Project contains no test cases set as publishable. Testing skipped."
               testResults+="\n- :warning: **${projectName} contains no test cases set as publishable. Testing skipped.**\n"
             fi
           else
-            echo "::warning title=${projectName} contains no test cases. Testing skipped."
+            echo "::warning title=${projectName} contains no test cases.:: Testing skipped."
             testResults+="\n- :warning: **${projectName} contains no test cases. Testing skipped.**\n"
           fi
           echo "::endgroup::"
@@ -193,14 +193,14 @@ runs:
 
         # Output that no tests were found
         if [ "$repositoryContainsTests" -eq 0 ]; then
-          echo "::warning title=No publishable UiPath test cases were found in this repository. Testing has been skipped."
+          echo "::warning title=No publishable UiPath test cases found::Testing has been skipped."
           echo "containsPublishableTestCases=false" >> $GITHUB_OUTPUT
         fi
 
         echo -e "testResults<<EOF\n$testResults\nEOF" >> $GITHUB_OUTPUT
 
         if [ "$testsFailed" -ne 0 ]; then
-          echo "::error title=Tests failed"
+          echo "::error title=Tests failed::One or more test runs failed."
           exit 1
         fi
 
