@@ -33,6 +33,10 @@ inputs:
   projectKey:
     description: 'Project key in Test Manager. (Required if using Test Manager parameters)'
     required: false
+  traceLevel:
+    description: 'Trace level for test execution logs. Possible values are Verbose, Information, Warning, Error. Default is Warning.'
+    required: false
+    default: "Warning"
 outputs:
   testExecutionLinks:
     description: 'Outputs a comma-separated list of Orchestrator links for viewing test results'
@@ -173,7 +177,7 @@ runs:
                 --out uipath \
                 --result_path "$testResultFilePath" \
                 --language en-US \
-                --traceLevel "Warning" \
+                --traceLevel "${{ inputs.traceLevel }}" \
                 ${{ steps.set_additional_parameters.outputs.additionalParameters }}
 
               if [ $? -ne 0 ]; then
