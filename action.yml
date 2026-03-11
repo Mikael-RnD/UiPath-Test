@@ -37,6 +37,10 @@ inputs:
     description: 'Trace level for test execution logs. Possible values are Verbose, Information, Warning, Error. Default is Warning.'
     required: false
     default: "Warning"
+  author:
+    description: 'The package author. If not provided, the GitHub actor will be used as the author of the package'
+    required: false
+    default: "${{ github.actor }}"
 outputs:
   testExecutionLinks:
     description: 'Outputs a comma-separated list of Orchestrator links for viewing test results'
@@ -177,6 +181,11 @@ runs:
                 --out uipath \
                 --result_path "$testResultFilePath" \
                 --language en-US \
+                --repositoryUrl "${{ github.server_url }}/${{ github.repository }}"  \
+                --repositoryCommit "${{ github.sha }}" \
+                --repositoryBranch "${{ github.head_ref || github.ref_name }}" \
+                --repositoryType git \
+                --author "${{ inputs.author }}"
                 --traceLevel "${{ inputs.traceLevel }}" \
                 ${{ steps.set_additional_parameters.outputs.additionalParameters }}
 
