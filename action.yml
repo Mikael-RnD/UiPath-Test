@@ -185,7 +185,7 @@ runs:
                 --repositoryCommit "${{ github.sha }}" \
                 --repositoryBranch "${{ github.head_ref || github.ref_name }}" \
                 --repositoryType git \
-                --author "${{ inputs.author }}"
+                --author "${{ inputs.author }}" \
                 --traceLevel "${{ inputs.traceLevel }}" \
                 ${{ steps.set_additional_parameters.outputs.additionalParameters }}
 
