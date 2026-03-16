@@ -194,11 +194,11 @@ runs:
               fi
             else
               echo "::warning title=${projectName} contains no test cases set as publishable.:: Project contains no test cases set as publishable. Testing skipped."
-              testResults+=$'\n- :warning: **'"${projectName}"$' contains no test cases set as publishable. Testing skipped.**\n'
+              testResults+=$'\n- ⚠️ **'"${projectName}"$' contains no test cases set as publishable. Testing skipped.**\n'
             fi
           else
             echo "::warning title=${projectName} contains no test cases.:: Testing skipped."
-            testResults+=$'\n- :warning: **'"${projectName}"$' contains no test cases. Testing skipped.**\n'
+            testResults+=$'\n- ⚠️ **'"${projectName}"$' contains no test cases. Testing skipped.**\n'
           fi
           echo "::endgroup::"
         done <<< "$projectJsonFiles"
@@ -241,7 +241,7 @@ runs:
           while IFS= read -r testCase; do
             testName=$(echo "$testCase" | jq -r '.Name')
             testStatus=$(echo "$testCase" | jq -r '.Status')
-            testResultsTable+=$'\n| '"$testName"$' | '"$(if [ "$testStatus" == "Passed" ]; then echo ":white_check_mark: Passed"; else echo ":x: Failed"; fi)"$' |'
+            testResultsTable+=$'\n| '"$testName"$' | '"$(if [ "$testStatus" == "Passed" ]; then echo "✅ Passed"; else echo "❌ Failed"; fi)"$' |'
           done <<< $(echo "$testCaseExecutions" | jq -c '.[]')
 
           testResults+=$'\n### [Test results for '"$(echo "$testResultData" | jq -r '.TestSetExecutions[0].Name')"$']('"$testSetExecutionLink"$')\n'"$testResultsTable"
@@ -291,7 +291,7 @@ runs:
               testCaseId=$(echo "$testCase" | jq -r '.TestCaseId')
               testStatus=$(echo "$testCase" | jq -r '.Status')
               testCaseLink="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/testmanager_/${{ inputs.projectKey }}/testexecution-results/$testSetRunId/$testCaseId"
-              testResultsTable+=$'\n| ['"$testName"$']('"$testCaseLink"$') | '"$(if [ "$testStatus" == "Passed" ]; then echo ":white_check_mark: Passed"; else echo ":x: Failed"; fi)"$' |'
+              testResultsTable+=$'\n| ['"$testName"$']("'"$testCaseLink"$'") | '"$(if [ "$testStatus" == "Passed" ]; then echo "✅ Passed"; else echo "❌ Failed"; fi)"$' |'
             done <<< $(echo "$testSetRun" | jq -c '.TestCaseExecutions[]')
 
             testResults+=$'\n### [Test results for '"$testSetRunName"$']('"$testSetExecutionLink"$')\n'"$testResultsTable"
