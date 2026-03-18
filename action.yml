@@ -291,7 +291,7 @@ runs:
               testCaseId=$(echo "$testCase" | jq -r '.TestCaseId')
               testStatus=$(echo "$testCase" | jq -r '.Status')
               testCaseLink="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/testmanager_/${{ inputs.projectKey }}/testexecution-results/$testSetRunId/$testCaseId"
-              testResultsTable+=$'\n| [$testName]($testCaseLink) | '"$(if [ "$testStatus" == "Passed" ]; then echo "✅ Passed"; else echo "❌ Failed"; fi)"$' |'
+              testResultsTable+=$'\n'"| [$testName]($testCaseLink) | $(if [ "$testStatus" == "Passed" ]; then echo "✅ Passed"; else echo "❌ Failed"; fi) |"
             done <<< $(echo "$testSetRun" | jq -c '.TestCaseExecutions[]')
 
             testResults+=$'\n### [Test results for '"$testSetRunName"$']('"$testSetExecutionLink"$')\n'"$testResultsTable"
