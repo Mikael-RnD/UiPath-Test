@@ -143,7 +143,9 @@ runs:
         echo "testResultsFolder=$testResultsFolder" >> $GITHUB_OUTPUT
         mkdir -p "$testResultsFolder"
         testResults=""
-        testExecutionBaseURL="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
+        orchestratorURL="${{ inputs.orchestratorUrl }}"
+        orchestratorURL="${orchestratorURL%/}"
+        testExecutionBaseURL="${orchestratorURL}/${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
         testExecutionURLs=""
         repositoryContainsTests=0
 
@@ -225,7 +227,9 @@ runs:
         testResults="${{ steps.run_tests.outputs.testResults }}"
         testExecutionUrls=""
         testResultsFolder="${{ steps.run_tests.outputs.testResultsFolder }}"
-        testExecutionBaseURL="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
+        orchestratorURL="${{ inputs.orchestratorUrl }}"
+        orchestratorURL="${orchestratorURL%/}"
+        baseUrl="${orchestratorURL}/${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/orchestrator_/test/executions/"
         folderId="${{ steps.get_folder_id.outputs.folderId }}"  
 
         # Loop through all JSON files in the test results folder
@@ -233,7 +237,7 @@ runs:
           echo "Processing test result file: $testResultFilePath"
           testResultData=$(cat "$testResultFilePath" | jq '.')
           testCaseExecutions=$(echo "$testResultData" | jq -c '.TestSetExecutions[] | .TestCaseExecutions')
-          testSetExecutionLink="$testExecutionBaseURL$(echo "$testResultData" | jq -r '.TestSetExecutions[0].Id')?fid=$folderId"
+          testSetExecutionLink="${baseUrl}$(echo "$testResultData" | jq -r '.TestSetExecutions[0].Id')?fid=$folderId"
 
           echo "Test execution can be viewed in Orchestrator by clicking this link: $testSetExecutionLink"
 
@@ -269,7 +273,10 @@ runs:
         testResults="${{ steps.run_tests.outputs.testResults }}"
         testExecutionUrls=""
         testResultsFolder="${{ steps.run_tests.outputs.testResultsFolder }}"
-        folderId="${{ steps.get_folder_id.outputs.folderId }}"  
+        folderId="${{ steps.get_folder_id.outputs.folderId }}"
+        orchestratorURL="${{ inputs.orchestratorUrl }}"
+        orchestratorURL="${orchestratorURL%/}"
+        baseUrl="${orchestratorURL}/${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/testmanager_/"
 
         # Loop through all JSON files in the test results folder
         while IFS= read -r testResultFilePath; do
@@ -280,7 +287,7 @@ runs:
           while IFS= read -r testSetRun; do
             testSetRunId=$(echo "$testSetRun" | jq -r '.Id')
             testSetRunName=$(echo "$testSetRun" | jq -r '.Name')
-            testSetExecutionLink="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/testmanager_/${{ inputs.projectKey }}/testexecutions/$testSetRunId"
+            testSetExecutionLink="${baseUrl}${{ inputs.projectKey }}/testexecutions/$testSetRunId"
 
             echo "Test execution can be viewed in Test Manager by clicking this link: $testSetExecutionLink"
 
@@ -290,7 +297,7 @@ runs:
               testName=$(echo "$testCase" | jq -r '.Name')
               testCaseId=$(echo "$testCase" | jq -r '.TestCaseId')
               testStatus=$(echo "$testCase" | jq -r '.Status')
-              testCaseLink="${{ inputs.orchestratorUrl }}${{ inputs.orchestratorLogicalName }}/${{ inputs.orchestratorTenant }}/testmanager_/${{ inputs.projectKey }}/testexecution-results/$testSetRunId/$testCaseId"
+              testCaseLink="${baseUrl}${{ inputs.projectKey }}/testexecution-results/$testSetRunId/$testCaseId"
               testResultsTable+=$'\n'"| [$testName]($testCaseLink) | $(if [ "$testStatus" == "Passed" ]; then echo "✅ Passed"; else echo "❌ Failed"; fi) |"
             done <<< $(echo "$testSetRun" | jq -c '.TestCaseExecutions[]')
 
