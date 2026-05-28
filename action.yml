@@ -297,7 +297,13 @@ runs:
               testName=$(echo "$testCase" | jq -r '.Name')
               testCaseId=$(echo "$testCase" | jq -r '.TestCaseId')
               testStatus=$(echo "$testCase" | jq -r '.Status')
-              testCaseLink="${baseUrl}${{ inputs.projectKey }}/testexecution-results/$testSetRunId/$testCaseId"
+              testCaseVariationId=$(echo "$testCase" | jq -r '.DataVariationIdentifier')
+              if [ "$testCaseVariationId" != "" ] && [ "$testCaseVariationId" != "null" ]; then
+                testName="$testName (Variation: $testCaseVariationId)"
+                testCaseLink="${baseUrl}${{ inputs.projectKey }}/testexecution-results/$testSetRunId/$testCaseId?variation=$testCaseVariationId"
+              else
+                testCaseLink="${baseUrl}${{ inputs.projectKey }}/testexecution-results/$testSetRunId/$testCaseId"
+              fi
               testResultsTable+=$'\n'"| [$testName]($testCaseLink) | $(if [ "$testStatus" == "Passed" ]; then echo "✅ Passed"; else echo "❌ Failed"; fi) |"
             done <<< $(echo "$testSetRun" | jq -c '.TestCaseExecutions[]')
 
